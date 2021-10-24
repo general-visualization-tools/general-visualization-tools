@@ -1,21 +1,11 @@
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
-const ReactRefreshWebpackPlugin = require("@pmmmwh/react-refresh-webpack-plugin");
 
 module.exports = {
   entry: "./src/index.tsx",
   module: {
     rules: [
-      {
-        test: /\.(js|ts|tsx)$/,
-        exclude: /(node_modules|bower_components)/,
-        loader: "babel-loader",
-        options: {
-          presets: ["@babel/env"],
-          plugins: ["react-refresh/babel"],
-        },
-      },
       {
         test: /\.css$/,
         use: [
@@ -50,6 +40,5 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: "src/index.html",
     }),
-    new ReactRefreshWebpackPlugin(),
   ],
 };
