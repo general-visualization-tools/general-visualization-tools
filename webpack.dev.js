@@ -9,4 +9,8 @@ module.exports = merge(common, {
     path: path.resolve(__dirname, "dist_dev/"),
     filename: "bundle.js",
   },
+  devServer: {
+    static: "./dist_dev",
+    open: true,
+  },
 });
