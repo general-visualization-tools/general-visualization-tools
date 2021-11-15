@@ -1,5 +1,5 @@
 from flask import Flask, request
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', static_url_path="/static")
 
 @app.route('/projects', methods=['POST', 'GET'])
 def post_projects():
@@ -28,6 +28,15 @@ def get_submissions():
 @app.route('/projects/<projectID>/submissions/<submissionID>', methods=['GET'])
 def get_unique_submission(submissionID):
     return "get ann unique projects"
+
+
+@app.route('/<path:subpath>')
+def response_static_file(subpath):
+    return app.send_static_file(subpath)
+
+@app.route('/', defaults={'path': ''})
+def index(path):
+    return app.send_static_file("index.html")
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0")
