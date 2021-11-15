@@ -18,16 +18,16 @@ def delete_unique_project(projectID):
     return "delete a project"
 
 @app.route('/projects/<projectID>/submissions', methods=['POST'])
-def post_submissions():
+def post_submissions(projectID):
     return "submit"
 
 @app.route('/projects/<projectID>/submissions', methods=['GET'])
-def get_submissions():
+def get_submissions(projectID):
     return "get all submissions"
 
 @app.route('/projects/<projectID>/submissions/<submissionID>', methods=['GET'])
-def get_unique_submission(submissionID):
-    return "get ann unique projects"
+def get_unique_submission(projectID, submissionID):
+    return f"get an unique projects {submissionID}"
 
 
 @app.route('/<path:subpath>')
