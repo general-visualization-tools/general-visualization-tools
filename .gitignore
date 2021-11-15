@@ -91,3 +91,7 @@ lerna-debug.log
 # System Files
 .DS_Store
 Thumbs.db
+
+# python
+.venv
+__pycache__
