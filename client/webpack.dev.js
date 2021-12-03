@@ -18,6 +18,11 @@ module.exports = merge(common, {
           plugins: ["react-refresh/babel"],
         },
       },
+      {
+        test: /\.(ts|tsx)$/,
+        exclude: /(node_modules|bower_components)/,
+        loader: "ts-loader",
+      },
     ],
   },
   output: {
