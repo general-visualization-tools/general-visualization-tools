@@ -1,25 +1,32 @@
-import React, {FC, useState, useEffect, useCallback, memo, useMemo} from "react";
-import Highcharts from 'highcharts'
-import HighchartsReact from 'highcharts-react-official'
-import lodash from 'lodash'
+import React, {
+  FC,
+  useState,
+  useEffect,
+  useCallback,
+  memo,
+  useMemo,
+} from "react";
+import Highcharts from "highcharts";
+import HighchartsReact from "highcharts-react-official";
+import lodash from "lodash";
 
 type Props = {};
 type CircleType = {
-  id: number,
-  cx: number,
-  cy: number,
-  r: number,
-  color: string,
+  id: number;
+  cx: number;
+  cy: number;
+  r: number;
+  color: string;
 };
 type CirclesProps = {
-  width?: number,
-  height?: number,
-  initialRadius?: number,
-  varRadius?: number,
-  circleNum?: number,
-  changeNum?: number,
-  colors?: string[],
-}
+  width?: number;
+  height?: number;
+  initialRadius?: number;
+  varRadius?: number;
+  circleNum?: number;
+  changeNum?: number;
+  colors?: string[];
+};
 
 const buttonStyle = {
   width: 300,
@@ -37,95 +44,154 @@ const seekbarStyle = {
   margin: "auto",
   background: "#000000",
   borderRadius: 10,
-}
+};
 
-const rand_norm = (mean: number, variance: number) => Math.sqrt(-2 * Math.log(1 - Math.random())) * Math.cos(2 * Math.PI * Math.random()) * variance + mean;
-const rand_range = (n: number) => Math.floor(Math.random()*n);
+const rand_norm = (mean: number, variance: number) =>
+  Math.sqrt(-2 * Math.log(1 - Math.random())) *
+    Math.cos(2 * Math.PI * Math.random()) *
+    variance +
+  mean;
+const rand_range = (n: number) => Math.floor(Math.random() * n);
 
 const Graph: FC<{}> = () => {
-
   const [dataForGraph, setDataForGraph] = useState<number[][]>([]);
 
-  const options = useMemo(() => Object({title: {text: 'dist sum'}, series: [{data: dataForGraph}]}), [dataForGraph]);
+  const options = useMemo(
+    () =>
+      Object({ title: { text: "dist sum" }, series: [{ data: dataForGraph }] }),
+    [dataForGraph]
+  );
 
   return (
     <>
-      <div style={{height: 100, margin: "auto", display: "flex", justifyContent: "center", alignItems: "center"}}>
+      <div
+        style={{
+          height: 100,
+          margin: "auto",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
         <div>for graph: </div>
-        <input type='file' onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-          e.target.files.item(0).text().then(original_data => {
-            let data = original_data.split('\n').map(xs => xs.split(' ').map(x => parseFloat(x)));
-            // data = data.map((x, i) => [i, x[1]]);
-            setDataForGraph(data);
-          });
-        }}/>
-      </div>
-      <div style={{width: 1000, margin: "auto"}}>
-        <HighchartsReact
-          highcharts={Highcharts}
-          options={options}
+        <input
+          type="file"
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+            e.target.files
+              .item(0)
+              .text()
+              .then((original_data) => {
+                let data = original_data
+                  .split("\n")
+                  .map((xs) => xs.split(" ").map((x) => parseFloat(x)));
+                // data = data.map((x, i) => [i, x[1]]);
+                setDataForGraph(data);
+              });
+          }}
         />
+      </div>
+      <div style={{ width: 1000, margin: "auto" }}>
+        <HighchartsReact highcharts={Highcharts} options={options} />
       </div>
     </>
   );
-}
+};
 
 const Circles: FC<CirclesProps> = ({
-    width = 1800,
-    height = 1000,
-    initialRadius = 3,
-    varRadius = 20,
-    circleNum = 100,
-    changeNum = 30,
-    colors = [ "#a0d8ef", "#00a381", "#eaf4fc", "#895b8a", "#e6b422" ],
-  }) => {
+  width = 1800,
+  height = 1000,
+  initialRadius = 3,
+  varRadius = 20,
+  circleNum = 100,
+  changeNum = 30,
+  colors = ["#a0d8ef", "#00a381", "#eaf4fc", "#895b8a", "#e6b422"],
+}) => {
+  const default_circles = useMemo<CircleType[]>(
+    () =>
+      [...Array(circleNum)].map((_, idx) =>
+        Object({
+          id: idx,
+          cx: rand_range(width),
+          cy: rand_range(height),
+          r: initialRadius,
+          color: colors[rand_range(colors.length)],
+        })
+      ),
+    []
+  );
 
-  const default_circles = useMemo<CircleType[]>(() => [...Array(circleNum)].map((_, idx) => Object({id: idx, cx: rand_range(width), cy: rand_range(height), r: initialRadius, color: colors[rand_range(colors.length)]})), []);
+  const update_circles = useCallback(
+    (current_circles: CircleType[]) => {
+      let update_target = Array(circleNum).fill(false);
+      for (let i = 0; i < changeNum; ++i)
+        update_target[rand_range(circleNum)] = true;
 
-  const update_circles = useCallback((current_circles: CircleType[]) => {
-    let update_target = Array(circleNum).fill(false);
-    for (let i=0; i<changeNum; ++i) update_target[rand_range(circleNum)] = true;
-
-    let new_circles = current_circles.filter(cir => !update_target[cir.id]);
-    for (let i=0; i<circleNum; ++i) if (update_target[i]) {
-      new_circles.push({id: i, cx: rand_range(width), cy: rand_range(height), r: Math.abs(rand_norm(0, varRadius)), color: colors[rand_range(colors.length)]});
-    }
-    return new_circles;
-  }, [circleNum, changeNum, width, height, varRadius, ]);
+      let new_circles = current_circles.filter((cir) => !update_target[cir.id]);
+      for (let i = 0; i < circleNum; ++i)
+        if (update_target[i]) {
+          new_circles.push({
+            id: i,
+            cx: rand_range(width),
+            cy: rand_range(height),
+            r: Math.abs(rand_norm(0, varRadius)),
+            color: colors[rand_range(colors.length)],
+          });
+        }
+      return new_circles;
+    },
+    [circleNum, changeNum, width, height, varRadius]
+  );
 
   const [circles, setCircles] = useState<CircleType[]>(default_circles);
   const [circleIntervalID, setCircleIntervalID] = useState<number | null>(null);
   const [intervalMS, setIntervalMS] = useState<number>(100);
 
-  const MemoCircle: FC<{cir:CircleType}> = useCallback(memo(
-    ({cir}): JSX.Element => {
-      return <circle
-        cx={cir.cx}
-        cy={cir.cy}
-        r={cir.r}
-        fill={cir.color}
-        onClick={() => {
-          setCircles(current_circles => {
-            let new_circles = lodash.cloneDeep(current_circles);
-            const idx = new_circles.findIndex(tmp_cir => tmp_cir.id === cir.id);
-            new_circles[idx]['cy'] += 10;
-            return new_circles;
-          });
-        }}
-      />
-    },
-    (prevProps, nextProps) => lodash.isEqual(prevProps, nextProps)
-  ), []);
+  const MemoCircle: FC<{ cir: CircleType }> = useCallback(
+    memo(
+      ({ cir }): JSX.Element => {
+        return (
+          <circle
+            cx={cir.cx}
+            cy={cir.cy}
+            r={cir.r}
+            fill={cir.color}
+            onClick={() => {
+              setCircles((current_circles) => {
+                let new_circles = lodash.cloneDeep(current_circles);
+                const idx = new_circles.findIndex(
+                  (tmp_cir) => tmp_cir.id === cir.id
+                );
+                new_circles[idx]["cy"] += 10;
+                return new_circles;
+              });
+            }}
+          />
+        );
+      },
+      (prevProps, nextProps) => lodash.isEqual(prevProps, nextProps)
+    ),
+    []
+  );
 
-
-  const start = useCallback(() => window.setInterval(() => { setCircles(update_circles) }, intervalMS), [intervalMS]);
-  const stop = useCallback((currentCircleIntervalID) => { clearInterval(currentCircleIntervalID); return null; }, []);
+  const start = useCallback(
+    () =>
+      window.setInterval(() => {
+        setCircles(update_circles);
+      }, intervalMS),
+    [intervalMS]
+  );
+  const stop = useCallback((currentCircleIntervalID) => {
+    clearInterval(currentCircleIntervalID);
+    return null;
+  }, []);
   const func = circleIntervalID === null ? start : stop;
   const msg = circleIntervalID === null ? "start" : "stop";
 
   return (
     <>
-      <div style={{width: width, height: 90, display: "flex", margin: "auto"}}>
+      <div
+        style={{ width: width, height: 90, display: "flex", margin: "auto" }}
+      >
         <input
           style={seekbarStyle}
           type="range"
@@ -139,32 +205,38 @@ const Circles: FC<CirclesProps> = ({
             setIntervalMS(() => next_interval);
             if (circleIntervalID !== null) {
               setCircleIntervalID((currentCircleIntervalID) => {
-                clearInterval(currentCircleIntervalID); return window.setInterval(() => setCircles(update_circles), next_interval)
+                clearInterval(currentCircleIntervalID);
+                return window.setInterval(
+                  () => setCircles(update_circles),
+                  next_interval
+                );
               });
             }
           }}
         />
-        <p style={{margin: "auto"}}>{intervalMS} [ms]</p>
+        <p style={{ margin: "auto" }}>{intervalMS} [ms]</p>
 
         <button style={buttonStyle} onClick={() => setCircleIntervalID(func)}>
           {msg}
         </button>
 
-        <button style={buttonStyle} onClick={() => setCircles(update_circles) }>
+        <button style={buttonStyle} onClick={() => setCircles(update_circles)}>
           change some circles
         </button>
       </div>
 
-      <div style={{textAlign: "center"}}>
+      <div style={{ textAlign: "center" }}>
         <svg width={width} height={height}>
           {/* 上はメモしてなくて下はメモされてるはず　メモした方が2-4倍くらい速そう*/}
           {/*{circles.map(cir => <Circle cir={cir} key={cir.id}/>)}*/}
-          {circles.map(cir => <MemoCircle cir={cir} key={cir.id}/>)}
+          {circles.map((cir) => (
+            <MemoCircle cir={cir} key={cir.id} />
+          ))}
         </svg>
       </div>
     </>
-  )
-}
+  );
+};
 
 const Paths: FC<{}> = () => {
   const [pathIndex, setPathIndex] = useState(0);
@@ -172,41 +244,68 @@ const Paths: FC<{}> = () => {
 
   return (
     <>
-      <div style={{height: 100, margin: "auto", display: "flex", justifyContent: "center", alignItems: "center"}}>
+      <div
+        style={{
+          height: 100,
+          margin: "auto",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
         <div>for paths: </div>
-        <input type='file' onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-          e.target.files.item(0).text().then(original_data => {
-            setPaths(
-              original_data
-                .split('\n')
-                .map(xs =>
-                  xs.trim().split(' ').slice(1)
-                    .map(x => parseFloat(x))
-                    .reduce((l, x) => { if(l.length === 0 || l[l.length-1].length === 2) {l.push([x])} else {l[l.length-1].push(x)} return l;}, [])
-                )
-            );
-          });
-        }}/>
+        <input
+          type="file"
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+            e.target.files
+              .item(0)
+              .text()
+              .then((original_data) => {
+                setPaths(
+                  original_data.split("\n").map((xs) =>
+                    xs
+                      .trim()
+                      .split(" ")
+                      .slice(1)
+                      .map((x) => parseFloat(x))
+                      .reduce((l, x) => {
+                        if (l.length === 0 || l[l.length - 1].length === 2) {
+                          l.push([x]);
+                        } else {
+                          l[l.length - 1].push(x);
+                        }
+                        return l;
+                      }, [])
+                  )
+                );
+              });
+          }}
+        />
       </div>
-      <div style={{textAlign: "center"}}>
+      <div style={{ textAlign: "center" }}>
         <svg width={800} height={800}>
-          <polyline fill="none" stroke="#e74c3c" points={paths[pathIndex].flat().join(' ')}/>
-          {paths[pathIndex].map(point => <circle cx={point[0]} cy={point[1]} r={2}/>)}
+          <polyline
+            fill="none"
+            stroke="#e74c3c"
+            points={paths[pathIndex].flat().join(" ")}
+          />
+          {paths[pathIndex].map((point) => (
+            <circle cx={point[0]} cy={point[1]} r={2} />
+          ))}
         </svg>
       </div>
     </>
-  )
-}
+  );
+};
 
 export const App: FC<Props> = () => {
-
   return (
     <div>
-      <Graph/>
+      <Graph />
 
-      <Circles/>
+      <Circles />
 
-      <Paths/>
+      <Paths />
     </div>
   );
 };
