@@ -28,22 +28,26 @@ type CirclesProps = {
   colors?: string[];
 };
 
-const buttonStyle = {
-  width: 300,
+const buttonStyle: React.CSSProperties = {
+  minWidth: 280,
+  padding: 20,
   height: 60,
-  margin: "auto",
   borderWidth: 2,
   borderRadius: 15,
   borderColor: "#00a381",
   background: "#eaf4fc",
   textAlign: "center" as "center",
 };
-const seekbarStyle = {
+const seekbarStyle: React.CSSProperties = {
   width: 500,
   height: 8,
-  margin: "auto",
   background: "#000000",
   borderRadius: 10,
+};
+const appStyle: React.CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center"
 };
 
 const rand_norm = (mean: number, variance: number) =>
@@ -66,8 +70,7 @@ const Graph: FC<{}> = () => {
     <>
       <div
         style={{
-          height: 100,
-          margin: "auto",
+          padding: "40px 0",
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
@@ -90,9 +93,7 @@ const Graph: FC<{}> = () => {
           }}
         />
       </div>
-      <div style={{ width: 1000, margin: "auto" }}>
-        <HighchartsReact highcharts={Highcharts} options={options} />
-      </div>
+      <HighchartsReact highcharts={Highcharts} options={options} />
     </>
   );
 };
@@ -190,7 +191,7 @@ const Circles: FC<CirclesProps> = ({
   return (
     <>
       <div
-        style={{ width: width, height: 90, display: "flex", margin: "auto" }}
+        style={{ width: width, height: 90, display: "flex", justifyContent: "space-around", alignItems: "center" }}
       >
         <input
           style={seekbarStyle}
@@ -214,7 +215,7 @@ const Circles: FC<CirclesProps> = ({
             }
           }}
         />
-        <p style={{ margin: "auto" }}>{intervalMS} [ms]</p>
+        <p>{intervalMS} [ms]</p>
 
         <button style={buttonStyle} onClick={() => setCircleIntervalID(func)}>
           {msg}
@@ -246,8 +247,7 @@ const Paths: FC<{}> = () => {
     <>
       <div
         style={{
-          height: 100,
-          margin: "auto",
+          padding: "40px 0",
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
@@ -300,7 +300,7 @@ const Paths: FC<{}> = () => {
 
 export const App: FC<Props> = () => {
   return (
-    <div>
+    <div style={appStyle}>
       <Graph />
 
       <Circles />
