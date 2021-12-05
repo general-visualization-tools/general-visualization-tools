@@ -185,7 +185,6 @@ const Circles: FC<CirclesProps> = ({
     clearInterval(currentCircleIntervalID);
     return null;
   }, []);
-  const func = circleIntervalID === null ? start : stop;
 
   return (
     <>
@@ -216,7 +215,9 @@ const Circles: FC<CirclesProps> = ({
         />
         <p>{intervalMS} [ms]</p>
 
-        <button style={buttonStyle} onClick={() => setCircleIntervalID(func)}>
+        <button style={buttonStyle} onClick={() => {
+          setCircleIntervalID(circleIntervalID === null ? start : stop)
+          }}>
           {circleIntervalID === null ? "start" : "stop"}
         </button>
 
