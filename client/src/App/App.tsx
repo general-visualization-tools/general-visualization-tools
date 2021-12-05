@@ -226,15 +226,13 @@ const Circles: FC<CirclesProps> = ({
         </button>
       </div>
 
-      <div style={{ textAlign: "center" }}>
-        <svg width={width} height={height}>
-          {/* 上はメモしてなくて下はメモされてるはず　メモした方が2-4倍くらい速そう*/}
-          {/*{circles.map(cir => <Circle cir={cir} key={cir.id}/>)}*/}
-          {circles.map((cir) => (
-            <MemoCircle cir={cir} key={cir.id} />
-          ))}
-        </svg>
-      </div>
+      <svg width={width} height={height}>
+        {/* 上はメモしてなくて下はメモされてるはず　メモした方が2-4倍くらい速そう*/}
+        {/*{circles.map(cir => <Circle cir={cir} key={cir.id}/>)}*/}
+        {circles.map((cir) => (
+          <MemoCircle cir={cir} key={cir.id} />
+        ))}
+      </svg>
     </>
   );
 };
