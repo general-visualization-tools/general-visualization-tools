@@ -160,7 +160,7 @@ export const Circles: FC<CirclesProps> = ({
     []
   );
   return (
-    <>
+    <div style={{padding: "40px 0"}}>
       <ControlArea
         width={width}
         circleChanger={() => {
@@ -173,6 +173,6 @@ export const Circles: FC<CirclesProps> = ({
           <MemoCircle cir={cir} key={cir.id} />
         ))}
       </svg>
-    </>
+    </div>
   );
 };
