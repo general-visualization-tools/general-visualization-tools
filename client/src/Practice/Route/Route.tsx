@@ -1,11 +1,27 @@
 import React, { FC, useState } from "react";
+import { SeekBar } from "../ui/SeekBar";
 
 export const Route: FC<{}> = () => {
   const [pathIndex, setPathIndex] = useState(0);
   const [paths, setPaths] = useState<number[][]>([[]]);
 
+  const seekBarHandler = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextPathIndex = parseInt(event.target.value);
+    setPathIndex(nextPathIndex);
+  };
+
+  console.log(paths.length);
+  console.log(paths);
   return (
     <>
+      <SeekBar
+        value={pathIndex}
+        step={1}
+        min={0}
+        max={paths.length - 1}
+        onChangeHandler={seekBarHandler}
+      />
+      <p>{pathIndex} th</p>
       <div
         style={{
           padding: "40px 0",
@@ -22,8 +38,9 @@ export const Route: FC<{}> = () => {
               .item(0)
               .text()
               .then((original_data) => {
-                setPaths(
-                  original_data.split("\n").map((xs) =>
+                const nextPaths = original_data
+                  .split("\n")
+                  .map((xs) =>
                     xs
                       .trim()
                       .split(" ")
@@ -38,7 +55,8 @@ export const Route: FC<{}> = () => {
                         return l;
                       }, [])
                   )
-                );
+                  .filter((x) => x.length !== 0);
+                setPaths(nextPaths.length === 0 ? [[]] : nextPaths);
               });
           }}
         />
