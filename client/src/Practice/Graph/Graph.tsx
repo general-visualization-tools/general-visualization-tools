@@ -6,8 +6,14 @@ export const Graph: FC<{}> = () => {
   const [dataForGraph, setDataForGraph] = useState<number[][]>([]);
 
   const options = useMemo(
-    () =>
-      Object({ title: { text: "dist sum" }, series: [{ data: dataForGraph }] }),
+    () => ({
+      title: { text: "dist sum" },
+      series: [{ data: dataForGraph }],
+      chart: {
+        zoomType: "x",
+        width: 1500,
+      },
+    }),
     [dataForGraph]
   );
 
