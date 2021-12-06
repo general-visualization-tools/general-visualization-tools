@@ -45,7 +45,7 @@ const ControlArea: FC<ControlAreaType> = ({ width, circleChanger }) => {
         alignItems: "center",
       }}
     >
-      <SeekBar intervalMS={intervalMS} onChangeHandler={seekBarHandler} />
+      <SeekBar value={intervalMS} step={10} min={10} max={1000} onChangeHandler={seekBarHandler} />
       <p>{intervalMS} [ms]</p>
       <Button
         msg={circleChanging ? "start" : "stop"}

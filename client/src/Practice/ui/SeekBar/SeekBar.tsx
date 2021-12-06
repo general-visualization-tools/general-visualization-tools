@@ -1,7 +1,10 @@
 import React, { FC } from "react";
 
 type SeekBarProps = {
-  intervalMS: number;
+  value: number,
+  step: number,
+  min: number,
+  max: number,
   onChangeHandler:
     | { (): void; (event: React.ChangeEvent<HTMLInputElement>): void }
     | (() => void)
@@ -13,16 +16,16 @@ const seekBarStyle: React.CSSProperties = {
   background: "#000000",
   borderRadius: 10,
 };
-export const SeekBar: FC<SeekBarProps> = ({ intervalMS, onChangeHandler }) => {
+export const SeekBar: FC<SeekBarProps> = ({ value, step, min, max, onChangeHandler }) => {
   return (
     <input
       style={seekBarStyle}
       type="range"
       name="speed"
-      step="10"
-      min="10"
-      max="1000"
-      value={intervalMS}
+      step={step}
+      min={min}
+      max={max}
+      value={value}
       onChange={onChangeHandler}
     />
   );
