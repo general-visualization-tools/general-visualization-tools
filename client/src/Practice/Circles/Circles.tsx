@@ -45,7 +45,13 @@ const ControlArea: FC<ControlAreaType> = ({ width, circleChanger }) => {
         alignItems: "center",
       }}
     >
-      <SeekBar value={intervalMS} step={10} min={10} max={1000} onChangeHandler={seekBarHandler} />
+      <SeekBar
+        value={intervalMS}
+        step={10}
+        min={10}
+        max={1000}
+        onChangeHandler={seekBarHandler}
+      />
       <p>{intervalMS} [ms]</p>
       <Button
         msg={circleChanging ? "start" : "stop"}
@@ -146,17 +152,9 @@ export const Circles: FC<CirclesProps> = ({
 
   const MemoCircle: FC<{ cir: CircleType }> = useCallback(
     memo(
-      ({ cir }): JSX.Element => {
-        return (
-          <circle
-            cx={cir.cx}
-            cy={cir.cy}
-            r={cir.r}
-            fill={cir.color}
-            onClick={circleClickHandlerGenerator(cir)}
-          />
-        );
-      },
+      ({ cir }): JSX.Element => (
+        <Circle cir={cir} clickHandler={circleClickHandlerGenerator(cir)} />
+      ),
       (prevProps, nextProps) => lodash.isEqual(prevProps, nextProps)
     ),
     []
@@ -171,8 +169,6 @@ export const Circles: FC<CirclesProps> = ({
       />
 
       <svg width={width} height={height}>
-        {/* 上はメモしてなくて下はメモされてるはず　メモした方が2-4倍くらい速そう*/}
-        {/*{circles.map(cir => <Circle cir={cir} key={cir.id}/>)}*/}
         {circles.map((cir) => (
           <MemoCircle cir={cir} key={cir.id} />
         ))}
