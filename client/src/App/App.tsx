@@ -2,59 +2,23 @@ import React, {
   FC,
   useState,
   useEffect,
+  useReducer,
   useCallback,
   memo,
   useMemo,
+  Dispatch,
+  SetStateAction,
 } from "react";
 import Highcharts from "highcharts";
 import HighchartsReact from "highcharts-react-official";
 import lodash from "lodash";
-
-type Props = {};
-type CircleType = {
-  id: number;
-  cx: number;
-  cy: number;
-  r: number;
-  color: string;
-};
-type CirclesProps = {
-  width?: number;
-  height?: number;
-  initialRadius?: number;
-  varRadius?: number;
-  circleNum?: number;
-  changeNum?: number;
-  colors?: string[];
-};
-
-const buttonStyle: React.CSSProperties = {
-  minWidth: 280,
-  padding: 20,
-  height: 60,
-  borderWidth: 2,
-  borderRadius: 15,
-  borderColor: "#00a381",
-  background: "#eaf4fc",
-  textAlign: "center" as "center",
-};
-const seekbarStyle: React.CSSProperties = {
-  width: 500,
-  height: 8,
-  background: "#000000",
-  borderRadius: 10,
-};
-const appStyle: React.CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center"
-};
 
 const rand_norm = (mean: number, variance: number) =>
   Math.sqrt(-2 * Math.log(1 - Math.random())) *
     Math.cos(2 * Math.PI * Math.random()) *
     variance +
   mean;
+
 const rand_range = (n: number) => Math.floor(Math.random() * n);
 
 const Graph: FC<{}> = () => {
@@ -98,54 +62,195 @@ const Graph: FC<{}> = () => {
   );
 };
 
+type ButtonProps = {
+  msg: string;
+  clickHandler:
+    | {
+        (): void;
+        (event: React.MouseEvent<HTMLButtonElement>): void;
+      }
+    | (() => void)
+    | ((event: React.MouseEvent<HTMLButtonElement>) => void);
+};
+const buttonStyle: React.CSSProperties = {
+  minWidth: 280,
+  padding: 20,
+  height: 60,
+  borderWidth: 2,
+  borderRadius: 15,
+  borderColor: "#00a381",
+  background: "#eaf4fc",
+  textAlign: "center" as "center",
+};
+const Button: FC<ButtonProps> = ({ msg, clickHandler }) => (
+  <button style={buttonStyle} onClick={clickHandler}>
+    {msg}
+  </button>
+);
+
+type SeekbarProps = {
+  intervalMS: number;
+  onChangeHandler:
+    | { (): void; (event: React.ChangeEvent<HTMLInputElement>): void }
+    | (() => void)
+    | ((event: React.ChangeEvent<HTMLInputElement>) => void);
+};
+const seekbarStyle: React.CSSProperties = {
+  width: 500,
+  height: 8,
+  background: "#000000",
+  borderRadius: 10,
+};
+const Seekbar: FC<SeekbarProps> = ({ intervalMS, onChangeHandler }) => {
+  return (
+    <input
+      style={seekbarStyle}
+      type="range"
+      name="speed"
+      step="10"
+      min="10"
+      max="1000"
+      value={intervalMS}
+      onChange={onChangeHandler}
+    />
+  );
+};
+
+type ControlAreaType = {
+  width: number;
+  circleChanger: () => void;
+};
+const ControlArea: FC<ControlAreaType> = ({ width, circleChanger }) => {
+  const [intervalID, setIntervalID] = useState<number | null>(null);
+  const [intervalMS, setIntervalMS] = useState<number>(100);
+
+  const circleChanging = intervalID === null;
+  const intervalStateChanger = () =>
+    setIntervalID((currentIntervalID) => {
+      if (circleChanging) {
+        return window.setInterval(circleChanger, intervalMS);
+      } else {
+        clearInterval(currentIntervalID);
+        return null;
+      }
+    });
+
+  const seekbarHandler = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextInterval = parseInt(event.target.value);
+    setIntervalMS(nextInterval);
+    if (intervalID !== null) {
+      setIntervalID((currentIntervalID) => {
+        clearInterval(currentIntervalID);
+        return window.setInterval(circleChanger, nextInterval);
+      });
+    }
+  };
+
+  return (
+    <div
+      style={{
+        width: width,
+        height: 90,
+        display: "flex",
+        justifyContent: "space-around",
+        alignItems: "center",
+      }}
+    >
+      <Seekbar intervalMS={intervalMS} onChangeHandler={seekbarHandler} />
+      <p>{intervalMS} [ms]</p>
+      <Button
+        msg={circleChanging ? "start" : "stop"}
+        clickHandler={intervalStateChanger}
+      />
+      <Button msg="change some circles" clickHandler={circleChanger} />
+    </div>
+  );
+};
+
+type CircleType = {
+  id: number;
+  cx: number;
+  cy: number;
+  r: number;
+  color: string;
+};
+type CirclesProps = {
+  width?: number;
+  height?: number;
+  initialRadius?: number;
+  varRadius?: number;
+  circleNum?: number;
+  changeNum?: number;
+  colors?: string[];
+};
+const generateCircles = (
+  n: number,
+  maxX: number,
+  maxY: number,
+  r: number,
+  colors: string[]
+) =>
+  [...Array(n)].map((_, idx) =>
+    Object({
+      id: idx,
+      cx: rand_range(maxX),
+      cy: rand_range(maxY),
+      r: r,
+      color: colors[rand_range(colors.length)],
+    })
+  );
+const updateCircles = (
+  currentCircles: CircleType[],
+  n: number,
+  maxX: number,
+  maxY: number,
+  varRadius: number,
+  colors: string[]
+) => {
+  const circleNum = currentCircles.length;
+  let update_target = Array(circleNum).fill(false);
+  for (let i = 0; i < n; ++i) update_target[rand_range(circleNum)] = true;
+
+  let new_circles = lodash
+    .cloneDeep(currentCircles)
+    .filter((cir) => !update_target[cir.id]);
+  for (let i = 0; i < circleNum; ++i)
+    if (update_target[i]) {
+      new_circles.push({
+        id: i,
+        cx: rand_range(maxX),
+        cy: rand_range(maxY),
+        r: Math.abs(rand_norm(0, varRadius)),
+        color: colors[rand_range(colors.length)],
+      });
+    }
+  return new_circles;
+};
 const Circles: FC<CirclesProps> = ({
   width = 1800,
   height = 1000,
   initialRadius = 3,
   varRadius = 20,
-  circleNum = 100,
+  circleNum = 1000,
   changeNum = 30,
   colors = ["#a0d8ef", "#00a381", "#eaf4fc", "#895b8a", "#e6b422"],
 }) => {
-  const default_circles = useMemo<CircleType[]>(
-    () =>
-      [...Array(circleNum)].map((_, idx) =>
-        Object({
-          id: idx,
-          cx: rand_range(width),
-          cy: rand_range(height),
-          r: initialRadius,
-          color: colors[rand_range(colors.length)],
-        })
+  const specializedUpdateCircles = useCallback(
+    (currentCircles: CircleType[]) =>
+      updateCircles(
+        currentCircles,
+        changeNum,
+        width,
+        height,
+        varRadius,
+        colors
       ),
     []
   );
 
-  const update_circles = useCallback(
-    (current_circles: CircleType[]) => {
-      let update_target = Array(circleNum).fill(false);
-      for (let i = 0; i < changeNum; ++i)
-        update_target[rand_range(circleNum)] = true;
-
-      let new_circles = current_circles.filter((cir) => !update_target[cir.id]);
-      for (let i = 0; i < circleNum; ++i)
-        if (update_target[i]) {
-          new_circles.push({
-            id: i,
-            cx: rand_range(width),
-            cy: rand_range(height),
-            r: Math.abs(rand_norm(0, varRadius)),
-            color: colors[rand_range(colors.length)],
-          });
-        }
-      return new_circles;
-    },
-    [circleNum, changeNum, width, height, varRadius]
+  const [circles, setCircles] = useState<CircleType[]>(
+    generateCircles(circleNum, width, height, initialRadius, colors)
   );
-
-  const [circles, setCircles] = useState<CircleType[]>(default_circles);
-  const [circleIntervalID, setCircleIntervalID] = useState<number | null>(null);
-  const [intervalMS, setIntervalMS] = useState<number>(100);
 
   const MemoCircle: FC<{ cir: CircleType }> = useCallback(
     memo(
@@ -173,58 +278,14 @@ const Circles: FC<CirclesProps> = ({
     ),
     []
   );
-
-  const start = useCallback(
-    () =>
-      window.setInterval(() => {
-        setCircles(update_circles);
-      }, intervalMS),
-    [intervalMS]
-  );
-  const stop = useCallback((currentCircleIntervalID) => {
-    clearInterval(currentCircleIntervalID);
-    return null;
-  }, []);
-
   return (
     <>
-      <div
-        style={{ width: width, height: 90, display: "flex", justifyContent: "space-around", alignItems: "center" }}
-      >
-        <input
-          style={seekbarStyle}
-          type="range"
-          name="speed"
-          step="10"
-          min="10"
-          max="1000"
-          value={intervalMS}
-          onChange={(event) => {
-            const next_interval = parseInt(event.target.value);
-            setIntervalMS(() => next_interval);
-            if (circleIntervalID !== null) {
-              setCircleIntervalID((currentCircleIntervalID) => {
-                clearInterval(currentCircleIntervalID);
-                return window.setInterval(
-                  () => setCircles(update_circles),
-                  next_interval
-                );
-              });
-            }
-          }}
-        />
-        <p>{intervalMS} [ms]</p>
-
-        <button style={buttonStyle} onClick={() => {
-          setCircleIntervalID(circleIntervalID === null ? start : stop)
-          }}>
-          {circleIntervalID === null ? "start" : "stop"}
-        </button>
-
-        <button style={buttonStyle} onClick={() => setCircles(update_circles)}>
-          change some circles
-        </button>
-      </div>
+      <ControlArea
+        width={width}
+        circleChanger={() => {
+          setCircles(specializedUpdateCircles);
+        }}
+      />
 
       <svg width={width} height={height}>
         {/* 上はメモしてなくて下はメモされてるはず　メモした方が2-4倍くらい速そう*/}
@@ -296,6 +357,12 @@ const Paths: FC<{}> = () => {
   );
 };
 
+type Props = {};
+const appStyle: React.CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+};
 export const App: FC<Props> = () => {
   return (
     <div style={appStyle}>
