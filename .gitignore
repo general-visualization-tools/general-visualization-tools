@@ -95,3 +95,15 @@ Thumbs.db
 # python
 .venv
 __pycache__
+
+# tmp while developing
+in/
+out/
+mark/
+main.cpp
+out.svg
+vis
+.vscode/launch.json
+setting.json
+solver
+output.json
