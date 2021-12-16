@@ -10,18 +10,19 @@ from typing import Literal
 logging.basicConfig(level=logging.DEBUG, format="(%(levelname)s: %(name)s)  %(message)s")
 logger = logging.getLogger(__name__)
 
+
 def run(settin_filepath: str, *, out_filepath='./output.json'):
     # 設定ファイルを読み込む
     with open(settin_filepath) as f:
         setting_dict = json.load(f)
 
     # 設定ファイルから読み込んだデータを格納
-    in_and_out_filepaths: list[dict[str,str]] = setting_dict["files"]
+    in_and_out_filepaths: list[dict[str, str]] = setting_dict["files"]
     solve_command: str = _concat_commands(setting_dict['solver'])
     score_command: str = _concat_commands(setting_dict['scoring'])
-    max_workers  : int = setting_dict['concurrency']
+    max_workers:   int = setting_dict['concurrency']
 
-    scores: list[float]            = []
+    scores: list[float] = []
     executionResults: list[dict] = []
     is_AC = True
     number_of_files = len(in_and_out_filepaths)
@@ -32,7 +33,7 @@ def run(settin_filepath: str, *, out_filepath='./output.json'):
                 in_and_out_filepaths,
                 [solve_command for _ in range(number_of_files)],
                 [score_command for _ in range(number_of_files)]
-            ):
+        ):
             # ひとつでも失敗があればWAとする
             if result.state != 'succeeded':
                 is_AC = False
@@ -51,7 +52,7 @@ def run(settin_filepath: str, *, out_filepath='./output.json'):
     n = len(scores)
     # 後でjsonに変換する辞書を作成
     output_dict = {
-        'state': 'AC' if is_AC == True else 'WA',
+        'state': 'AC' if is_AC is True else 'WA',
         'date': datetime.datetime.now().strftime('%Y:%m:%d %H:%M:%S'),
         'score': {
             'ave': sum(scores) / n,
@@ -64,6 +65,7 @@ def run(settin_filepath: str, *, out_filepath='./output.json'):
     # jsonを指定されたパスに出力する
     with open(out_filepath, 'w') as f:
         json.dump(output_dict, f, indent=2, ensure_ascii=False)
+
 
 class ExecutionResult:
     # ソルバーと採点の実行結果を表すクラス
@@ -94,7 +96,7 @@ class ExecutionResult:
         self.score = score
         self.execMsTime = execMsTime
         self.memoryUsed = memoryUsed
-    
+
     def to_dict(self):
         return {
             'state': self.state,
@@ -105,6 +107,7 @@ class ExecutionResult:
             'execMsTime': self.execMsTime,
             'memoryUsed': self.memoryUsed
         }
+
 
 def _single_solve_and_score(in_and_out_filepath: dict[str, str], solve_command: str, score_command: str) -> ExecutionResult:
     in_filepath = in_and_out_filepath["in"]
@@ -126,13 +129,14 @@ def _single_solve_and_score(in_and_out_filepath: dict[str, str], solve_command: 
         finished_score.check_returncode()
     # 採点の失敗時
     except subprocess.CalledProcessError:
-        result =  ExecutionResult('scoring failed', in_filepath, out_filepath, errorcode=finished_score.stderr)
+        result = ExecutionResult('scoring failed', in_filepath, out_filepath, errorcode=finished_score.stderr)
     else:
         # 採点結果を取り出す
         score = _extract_scoring_output(finished_score.stdout)
         result = ExecutionResult('succeeded', in_filepath, out_filepath, score=score)
 
     return result
+
 
 def _concat_commands(commands: list[str]):
     # 設定ファイルから、ソルバーや採点のプログラムの実行コマンドが配列として渡される。
@@ -144,17 +148,19 @@ def _concat_commands(commands: list[str]):
         concatenatedCommand += command
     return concatenatedCommand
 
+
 def _extract_scoring_output(s: str):
     # 外部で用意される採点プログラムは、点数以外の出力を含む場合がある
     # そのためそれらから、点数の部分のみを取り出しfloat型として返す
     extract_str = re.search('(?<==)\s*\d*$', s)
     if extract_str is None:
-        #TODO: 将来的にはエラーを投げる
+        # TODO: 将来的にはエラーを投げる
         logger.debug('採点プログラムの出力から上手く点数を抽出できませんでした。\n')
         score = 0.0
     else:
         score = float(extract_str.group(0))
     return score
+
 
 if __name__ == '__main__':
     # マジック変数
