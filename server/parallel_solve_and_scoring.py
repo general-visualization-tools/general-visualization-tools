@@ -45,7 +45,7 @@ def run(settin_filepath: str, *, out_filepath='./output.json'):
                 [score_command for _ in range(number_of_files)]
         ):
             # ひとつでも失敗があればWAとする
-            if result.state != 'succeeded':
+            if result.state != ExecutionResultState.Succeeded:
                 is_AC = False
             else:
                 # スコアを配列に格納(後で平均等を計算するため)
