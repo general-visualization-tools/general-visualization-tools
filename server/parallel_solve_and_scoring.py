@@ -150,12 +150,7 @@ def _single_solve_and_score(in_and_out_filepath: dict[str, str], solve_command: 
 def _concat_commands(commands: list[str]):
     # 設定ファイルから、ソルバーや採点のプログラムの実行コマンドが配列として渡される。
     # それらを && で結合して、単一の文字列にする
-    concatenatedCommand = ''
-    for i, command in enumerate(commands):
-        if i != 0:
-            concatenatedCommand += ' && '
-        concatenatedCommand += command
-    return concatenatedCommand
+    return ' && '.join(commands)
 
 
 def _extract_scoring_output(s: str):
