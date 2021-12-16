@@ -4,11 +4,21 @@ import json
 import logging
 import re
 import datetime
-from typing import Literal
+import enum
+
 
 # logger の設定
 logging.basicConfig(level=logging.DEBUG, format="(%(levelname)s: %(name)s)  %(message)s")
 logger = logging.getLogger(__name__)
+
+
+class ExecutionResultState(enum.Enum):
+    SolverFailed = 'solver failed'
+    ScoringFailed = 'scoring failed'
+    Succeeded = 'succeeded'
+
+    def __str__(self):
+        return self.value
 
 
 def run(settin_filepath: str, *, out_filepath='./output.json'):
@@ -69,10 +79,9 @@ def run(settin_filepath: str, *, out_filepath='./output.json'):
 
 class ExecutionResult:
     # ソルバーと採点の実行結果を表すクラス
-    state_type = Literal['solver failed', 'scoring failed', 'succeeded']
     in_filepath: str
     out_filepath: str
-    state: state_type
+    state: ExecutionResultState
     errorcode: str
     score: float
     execMsTime: int
@@ -80,7 +89,7 @@ class ExecutionResult:
 
     def __init__(
         self,
-        state: state_type,
+        state: ExecutionResultState,
         in_filepath: str,
         out_filepath: str,
         *,
@@ -99,7 +108,7 @@ class ExecutionResult:
 
     def to_dict(self):
         return {
-            'state': self.state,
+            'state': str(self.state),
             'in_filepath': self.in_filepath,
             'out_filepath': self.out_filepath,
             'errorcode': self.errorcode,
@@ -120,7 +129,7 @@ def _single_solve_and_score(in_and_out_filepath: dict[str, str], solve_command: 
         finished_solver.check_returncode()
     # ソルバーの実行の失敗時
     except subprocess.CalledProcessError:
-        result = ExecutionResult('solver failed', in_filepath, out_filepath, errorcode=finished_solver.stderr)
+        result = ExecutionResult(ExecutionResultState.SolverFailed, in_filepath, out_filepath, errorcode=finished_solver.stderr)
 
     try:
         # 採点
@@ -129,11 +138,11 @@ def _single_solve_and_score(in_and_out_filepath: dict[str, str], solve_command: 
         finished_score.check_returncode()
     # 採点の失敗時
     except subprocess.CalledProcessError:
-        result = ExecutionResult('scoring failed', in_filepath, out_filepath, errorcode=finished_score.stderr)
+        result = ExecutionResult(ExecutionResultState.ScoringFailed, in_filepath, out_filepath, errorcode=finished_score.stderr)
     else:
         # 採点結果を取り出す
         score = _extract_scoring_output(finished_score.stdout)
-        result = ExecutionResult('succeeded', in_filepath, out_filepath, score=score)
+        result = ExecutionResult(ExecutionResultState.Succeeded, in_filepath, out_filepath, score=score)
 
     return result
 
