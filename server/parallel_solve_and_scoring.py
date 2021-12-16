@@ -122,29 +122,22 @@ def _single_solve_and_score(in_and_out_filepath: dict[str, str], solve_command: 
     in_filepath = in_and_out_filepath["in"]
     out_filepath = in_and_out_filepath["out"]
 
-    try:
-        # ソルバーを実行
-        finished_solver = subprocess.run(solve_command, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env={'IN_PATH': in_filepath, 'OUT_PATH': out_filepath})
-        # ソルバーが正しく終了をしていなければこの関数から例外が投げられる
-        finished_solver.check_returncode()
+    # ソルバーを実行
+    finished_solver = subprocess.run(solve_command, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env={'IN_PATH': in_filepath, 'OUT_PATH': out_filepath})
     # ソルバーの実行の失敗時
-    except subprocess.CalledProcessError:
-        result = ExecutionResult(ExecutionResultState.SolverFailed, in_filepath, out_filepath, errorcode=finished_solver.stderr)
+    if (finished_solver.returncode != 0):
+        return ExecutionResult(ExecutionResultState.SolverFailed, in_filepath, out_filepath, errorcode=finished_solver.stderr)
 
-    try:
-        # 採点
-        finished_score = subprocess.run(score_command, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env={'IN_PATH': in_filepath, 'OUT_PATH': out_filepath})
-        # 実行ファイルが正しく終了をしていなければこの関数から例外が投げられる
-        finished_score.check_returncode()
-    # 採点の失敗時
-    except subprocess.CalledProcessError:
-        result = ExecutionResult(ExecutionResultState.ScoringFailed, in_filepath, out_filepath, errorcode=finished_score.stderr)
+    # 採点を実行
+    finished_score = subprocess.run(score_command, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env={'IN_PATH': in_filepath, 'OUT_PATH': out_filepath})
+    # 採点の実行の失敗時
+    if (finished_score.returncode != 0):
+        return ExecutionResult(ExecutionResultState.ScoringFailed, in_filepath, out_filepath, errorcode=finished_score.stderr)
+    # ソルバーと採点の実行の成功時
     else:
         # 採点結果を取り出す
         score = _extract_scoring_output(finished_score.stdout)
-        result = ExecutionResult(ExecutionResultState.Succeeded, in_filepath, out_filepath, score=score)
-
-    return result
+        return ExecutionResult(ExecutionResultState.Succeeded, in_filepath, out_filepath, score=score)
 
 
 def _concat_commands(commands: list[str]):
