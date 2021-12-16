@@ -68,7 +68,7 @@ def run(settin_filepath: str, *, out_filepath='./output.json'):
             'ave': sum(scores) / n if n != 0 else 0,
             'sum': sum(scores),
             'min': scores[0] if n != 0 else 0,
-            'max': scores[n - 1] if n != 0 else 0
+            'max': scores[-1] if n != 0 else 0
         },
         'detailed': executionResults
     }
