@@ -55,10 +55,10 @@ def run(settin_filepath: str, *, out_filepath='./output.json'):
         'state': 'AC' if is_AC is True else 'WA',
         'date': datetime.datetime.now().strftime('%Y:%m:%d %H:%M:%S'),
         'score': {
-            'ave': sum(scores) / n,
+            'ave': sum(scores) / n if n != 0 else 0,
             'sum': sum(scores),
-            'min': scores[0],
-            'max': scores[n - 1]
+            'min': scores[0] if n != 0 else 0,
+            'max': scores[n - 1] if n != 0 else 0
         },
         'detailed': executionResults
     }
