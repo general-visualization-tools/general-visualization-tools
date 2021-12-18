@@ -47,10 +47,9 @@ def run(setting_filepath: str, *, out_filepath='./output.json'):
             # ひとつでも失敗があればWAとする
             if result.state != ExecutionResultState.Succeeded:
                 is_ac = False
-            else:
-                # スコアを配列に格納(後で平均等を計算するため)
-                # 失敗時のスコアは含めない
-                scores.append(result.score)
+            # スコアを配列に格納(後で平均等を計算するため)
+            scores.append(result.score)
+
             # 実行結果を格納
             # 失敗時のデータも含める
             execution_results.append(result.to_dict())
