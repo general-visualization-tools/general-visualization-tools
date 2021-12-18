@@ -21,9 +21,9 @@ class ExecutionResultState(enum.Enum):
         return self.value
 
 
-def run(settin_filepath: str, *, out_filepath='./output.json'):
+def run(setting_filepath: str, *, out_filepath='./output.json'):
     # 設定ファイルを読み込む
-    with open(settin_filepath) as f:
+    with open(setting_filepath) as f:
         setting_dict = json.load(f)
 
     # 設定ファイルから読み込んだデータを格納
@@ -33,8 +33,8 @@ def run(settin_filepath: str, *, out_filepath='./output.json'):
     max_workers:   int = setting_dict['concurrency']
 
     scores: list[float] = []
-    executionResults: list[dict] = []
-    is_AC = True
+    execution_results: list[dict] = []
+    is_ac = True
     number_of_files = len(in_and_out_filepaths)
     # ソルバーと採点を並列実行
     with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
@@ -46,14 +46,14 @@ def run(settin_filepath: str, *, out_filepath='./output.json'):
         ):
             # ひとつでも失敗があればWAとする
             if result.state != ExecutionResultState.Succeeded:
-                is_AC = False
+                is_ac = False
             else:
                 # スコアを配列に格納(後で平均等を計算するため)
                 # 失敗時のスコアは含めない
                 scores.append(result.score)
             # 実行結果を格納
             # 失敗時のデータも含める
-            executionResults.append(result.to_dict())
+            execution_results.append(result.to_dict())
 
             logger.info(f'{result.in_filepath} {result.state}')
 
@@ -62,7 +62,7 @@ def run(settin_filepath: str, *, out_filepath='./output.json'):
     n = len(scores)
     # 後でjsonに変換する辞書を作成
     output_dict = {
-        'state': 'AC' if is_AC is True else 'WA',
+        'state': 'AC' if is_ac is True else 'WA',
         'date': datetime.datetime.now().strftime('%Y:%m:%d %H:%M:%S'),
         'score': {
             'ave': sum(scores) / n if n != 0 else 0,
@@ -70,7 +70,7 @@ def run(settin_filepath: str, *, out_filepath='./output.json'):
             'min': scores[0] if n != 0 else 0,
             'max': scores[-1] if n != 0 else 0
         },
-        'detailed': executionResults
+        'detailed': execution_results
     }
     # jsonを指定されたパスに出力する
     with open(out_filepath, 'w') as f:
@@ -82,10 +82,10 @@ class ExecutionResult:
     in_filepath: str
     out_filepath: str
     state: ExecutionResultState
-    errorcode: str
+    error_code: str
     score: float
-    execMsTime: int
-    memoryUsed: int
+    exec_ms_time: int
+    memory_used: int
 
     def __init__(
         self,
@@ -93,28 +93,28 @@ class ExecutionResult:
         in_filepath: str,
         out_filepath: str,
         *,
-        errorcode: str = '',
+        error_code: str = '',
         score: float = 0.0,
-        execMsTime: int = 0,
-        memoryUsed: int = 0
+        exec_ms_time: int = 0,
+        memory_used: int = 0
     ):
         self.state = state
         self.in_filepath = in_filepath
         self.out_filepath = out_filepath
-        self.errorcode = errorcode
+        self.error_code = error_code
         self.score = score
-        self.execMsTime = execMsTime
-        self.memoryUsed = memoryUsed
+        self.exec_ms_time = exec_ms_time
+        self.memory_used = memory_used
 
     def to_dict(self):
         return {
             'state': str(self.state),
-            'in_filepath': self.in_filepath,
-            'out_filepath': self.out_filepath,
-            'errorcode': self.errorcode,
+            'inFilepath': self.in_filepath,
+            'outFilepath': self.out_filepath,
+            'errorCode': self.error_code,
             'score': self.score,
-            'execMsTime': self.execMsTime,
-            'memoryUsed': self.memoryUsed
+            'execMsTime': self.exec_ms_time,
+            'memoryUsed': self.memory_used
         }
 
 
@@ -125,14 +125,14 @@ def _single_solve_and_score(in_and_out_filepath: dict[str, str], solve_command: 
     # ソルバーを実行
     finished_solver = subprocess.run(solve_command, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env={'IN_PATH': in_filepath, 'OUT_PATH': out_filepath})
     # ソルバーの実行の失敗時
-    if (finished_solver.returncode != 0):
-        return ExecutionResult(ExecutionResultState.SolverFailed, in_filepath, out_filepath, errorcode=finished_solver.stderr)
+    if finished_solver.returncode != 0:
+        return ExecutionResult(ExecutionResultState.SolverFailed, in_filepath, out_filepath, error_code=finished_solver.stderr)
 
     # 採点を実行
     finished_score = subprocess.run(score_command, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env={'IN_PATH': in_filepath, 'OUT_PATH': out_filepath})
     # 採点の実行の失敗時
-    if (finished_score.returncode != 0):
-        return ExecutionResult(ExecutionResultState.ScoringFailed, in_filepath, out_filepath, errorcode=finished_score.stderr)
+    if finished_score.returncode != 0:
+        return ExecutionResult(ExecutionResultState.ScoringFailed, in_filepath, out_filepath, error_code=finished_score.stderr)
     # ソルバーと採点の実行の成功時
     else:
         # 採点結果を取り出す
