@@ -8,7 +8,7 @@ export const Graph: FC<{}> = () => {
   const options = useMemo(
     () => ({
       title: { text: "dist sum" },
-      series: [{ data: dataForGraph }],
+      series: dataForGraph,
       chart: {
         zoomType: "x",
         width: 1500,
@@ -31,6 +31,14 @@ export const Graph: FC<{}> = () => {
         <input
           type="file"
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+            e.target.files.item(0).text().then(original_data => {
+              const json = JSON.parse(original_data);
+              console.log(json);
+              delete json.c0[0].color;
+              delete json.c0[1].color;
+              setDataForGraph(json["c0"]);
+            })
+/*
             e.target.files
               .item(0)
               .text()
@@ -41,6 +49,7 @@ export const Graph: FC<{}> = () => {
                 // data = data.map((x, i) => [i, x[1]]);
                 setDataForGraph(data);
               });
+*/
           }}
         />
       </div>

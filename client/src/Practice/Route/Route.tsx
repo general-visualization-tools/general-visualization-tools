@@ -10,8 +10,6 @@ export const Route: FC<{}> = () => {
     setPathIndex(nextPathIndex);
   };
 
-  console.log(paths.length);
-  console.log(paths);
   return (
     <>
       <SeekBar
