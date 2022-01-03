@@ -10,9 +10,9 @@ use crate::context::Context;
 #[derive(Serialize, Clone, Debug)]
 pub struct Rect<'a> {
     #[serde(skip)]
-    canvas_id: &'a str,
+    pub(in super) canvas_id: &'a str,
     #[serde(rename="shapeID")]
-    shape_id: &'a str,
+    pub(in super) shape_id: &'a str,
 
     #[serde(flatten, skip_serializing_if = "Option::is_none")]
     color: Option<Color>,
@@ -181,4 +181,18 @@ impl<'a> Visualizable<'a> for MultiParametricRect<'a> {
     }
 }
 
-impl<'a> VisualizableFrom<'a, MultiParametricRect<'a>> for Rect<'a> {}
+impl<'a> VisualizableFrom<'a, MultiParametricRect<'a>> for Rect<'a> {
+    fn extract_diff_from(&self, other: &Self) -> Self {
+        Self {
+            canvas_id: self.canvas_id,
+            shape_id: self.shape_id,
+            color: if self.color == other.color { None } else { self.color.clone() },
+            x:     if self.x     == other.x     { None } else { self.x },
+            y:     if self.y     == other.y     { None } else { self.y },
+            w:     if self.w     == other.w     { None } else { self.w },
+            h:     if self.h     == other.h     { None } else { self.h },
+            z:     if self.z     == other.z     { None } else { self.z },
+            theta: if self.theta == other.theta { None } else { self.theta },
+        }
+    }
+}

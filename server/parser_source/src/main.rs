@@ -6,6 +6,7 @@ mod parts;
 
 use std::fs::{read_to_string, File};
 use std::error::Error;
+use std::io::Write;
 
 use docopt::Docopt;
 use serde::{ Deserialize };
@@ -16,18 +17,11 @@ use parts::rect::{ Rect };
 use parts::traits::*;
 use parts::charts::Charts;
 use crate::parts::circle::Circle;
-use std::io::Write;
-use crate::parts::shapes::Shapes;
+use crate::parts::shapes::Canvases;
+use std::collections::HashMap;
 
 
 /*
-
-最終的な出力を考えよう
-
-z-indexの操作はコンポーネントの順番を変えるだけでよく、おそらく再描画されない(console.logを挟むと出力はないが体感パフォーマンスが悪い気がする
-
-
-
 {
   'charts': {
     'canvasID': [
@@ -55,26 +49,17 @@ z-indexの操作はコンポーネントの順番を変えるだけでよく、�
       "transitions": [
         {
           "time": num,
-          "next": [
-            { "ID": "", ... }
-            ...
-          ]
-          "prev": [
-            { "ID": "", ... }
-            ...
+          "diffs": [
+            {
+              "next": { "ID": "", ... },
+              "prev": { "ID": "", ... },
+            }
           ]
         }
       ]
     }
   }
 }
-
-
-そもそもjavascript側でどのように扱うかを考えた方が良い気がする
-z-indexをプロパティに持って毎回ソートするのが実装上は最も簡単
-
-
-
 */
 
 
@@ -98,6 +83,7 @@ struct Args {
     flag_output: String,
     flag_settings: String,
 }
+
 
 fn main() -> Result<(), Box<dyn Error>> {
     let args: Args = Docopt::new(USAGE)
@@ -123,7 +109,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut words_iter = words.iter();
     let mut str_json = String::new();
     let mut charts = Charts::default();
-    let mut shapes = Shapes::default();
+    let mut canvases = Canvases::default();
 
     while let Some(&shape) = words_iter.next() {
         match shape {
@@ -141,33 +127,30 @@ fn main() -> Result<(), Box<dyn Error>> {
                 Ok(())
             }
             "rect" => {
-                let r = Rect::from_words_and_setting(&mut words_iter, settings.get("rect").unwrap(), &ctx)?;
+                let rect = Rect::from_words_and_setting(&mut words_iter, settings.get("rect").unwrap(), &ctx)?;
                 // println!("{}", serde_json::to_string_pretty(&r).unwrap());
-                str_json += serde_json::to_string(&r)?.as_str();
-                shapes.push_rect(r);
+                str_json += serde_json::to_string(&rect)?.as_str();
+                canvases.add_rect(rect, &ctx);
                 Ok(())
             },
             "point" => {
-                let c = Circle::from_words_and_setting(&mut words_iter, settings.get("point").unwrap(), &ctx)?;
+                let circle = Circle::from_words_and_setting(&mut words_iter, settings.get("point").unwrap(), &ctx)?;
                 // println!("{}", serde_json::to_string_pretty(&c).unwrap());
-                str_json += serde_json::to_string(&c)?.as_str();
-                shapes.push_circle(c);
+                str_json += serde_json::to_string(&circle)?.as_str();
+                canvases.add_circle(circle, &ctx);
                 Ok(())
             }
             cmd => { Err(format!("this command is not exists: {}", cmd)) }
         }?;
     }
 
-    for x in charts.to_map().keys() {
-        println!("{:?}", x);
-    }
-
     println!("\n ======================= \n");
 
     let mut file = File::create(output_dest)?;
-    let tmp = serde_json::to_string(&charts.to_map())?;
-    // writeln!(file, "{}", str_json)?;
-    writeln!(file, "{}", tmp)?;
+    let mut result = HashMap::new();
+    result.insert("charts", serde_json::to_value(charts.create_map())?);
+    result.insert("shapes", serde_json::to_value(canvases.create_map())?);
+    writeln!(file, "{}", serde_json::to_string(&result)?)?;
     file.flush()?;
 
     Ok(())

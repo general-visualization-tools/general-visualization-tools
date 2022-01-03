@@ -27,7 +27,7 @@ where
     fn set_by_param_name_and_word(&mut self, param_name: &'a str, word: &'a str, ctx: &Context) -> Result<(), Box<dyn Error>>;
 
     fn default_by_setting(setting: &'a Setting, ctx: &Context) -> Result<Self, Box<dyn Error>> {
-        let mut parts: Self = Default::default();
+        let mut parts = Self::default();
         for (param_name, word) in &setting.default_values {
             parts.set_by_param_name_and_word(param_name.as_str(), word.as_str(), ctx)?;
         }
@@ -50,6 +50,8 @@ where
     Self: TryFrom<From>,
     <Self as TryFrom<From>>::Error: Into<Box<dyn Error>>
 {
+    fn extract_diff_from(&self, other: &Self) -> Self;
+
     fn from_words_and_setting(words_iter: &mut Iter<&'a str>, setting: &'a Setting, ctx: &Context) -> Result<Self, Box<dyn Error>> {
         From::from_words_and_setting(words_iter, setting, ctx)?.try_into().map_err(|e: <Self as TryFrom<From>>::Error| e.into())
     }

@@ -7,7 +7,7 @@ use super::basic_types::Number;
 use crate::context::Context;
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Color {
     r: u8,
     g: u8,

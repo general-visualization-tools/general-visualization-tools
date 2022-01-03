@@ -9,7 +9,6 @@ use super::color::{ Color, Palette };
 use super::basic_types::Number;
 use super::traits::{ ParsableBasedOnCtx, Visualizable };
 
-
 /*
 {
   'canvasID': [
@@ -107,15 +106,11 @@ impl<'a> Charts<'a> {
         Ok(())
     }
 
-    pub fn to_map(&'a self) -> HashMap<&'a str, Vec<&'a Chart<'a>>> {
-        let mut result = HashMap::new();
-
-        for x in self.charts.values() {
-            result.entry(x.canvas_id).or_insert_with(Vec::new);
-            result.get_mut(x.canvas_id).unwrap().push(x);
-        }
-
-        result
+    pub fn create_map(&'a self) -> HashMap<&'a str, Vec<&'a Chart<'a>>> {
+        self.charts.values().fold(HashMap::new(), |mut result_map, chart| {
+            result_map.entry(chart.canvas_id).or_insert_with(Vec::new).push(chart);
+            result_map
+        })
     }
 }
 
@@ -127,32 +122,3 @@ impl<'a> Chart<'a> {
         }
     }
 }
-
-/*
-impl<'a> Chart {
-
-
-    fn set_by_param_name_and_word(&mut self, param_name: &'a str, word: &'a str, ctx: &Context) -> Result<(), Box<dyn Error>>;
-
-    fn from_words_and_setting(words_iter: &mut Iter<&'a str>, setting: &'a Setting, ctx: &Context) -> Result<Self, Box<dyn Error>> {
-
-    }
-
-    fn default_by_setting(setting: &'a Setting, ctx: &Context) -> Result<Self, Box<dyn Error>> {
-        let mut parts: Self = Default::default();
-        for (param_name, word) in &setting.default_values {
-            parts.set_by_param_name_and_word(param_name.as_str(), word.as_str(), ctx)?;
-        }
-        Ok(parts)
-    }
-
-    fn add_datum_by_words_and_setting(&mut self, words_iter: &mut Iter<&'a str>, setting: &'a Setting, ctx: &Context) -> Result<Self, Box<dyn Error>> {
-        let mut parts = Self::default_by_setting(setting, ctx)?;
-        for params_name in setting.input_params.iter() {
-            let next_word = *words_iter.next().ok_or(format!("words iter don't have more words. required: {}", params_name))?;
-            parts.set_by_param_name_and_word(params_name.as_str(), next_word, ctx)?;
-        }
-        Ok(parts)
-    }
-}
-*/
