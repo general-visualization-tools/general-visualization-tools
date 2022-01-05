@@ -31,7 +31,8 @@ fn defaults_value_deserializer<'de, D>(deserializer: D) -> Result<HashMap<String
 
 pub fn load_settings(path: &str) -> Result<HashMap<String, Setting>, Box<dyn Error>> {
     let settings: serde_json::Value = serde_json::from_str(&read_to_string(path)?)?;
-    let settings = settings.as_object().ok_or("settings must be object")?;
+    let settings = settings.as_object().ok_or("settings must be object")?
+        .get("commands").ok_or("commands is not exists")?.as_object().ok_or("commands must be object")?;
 
     let mut result = HashMap::new();
 

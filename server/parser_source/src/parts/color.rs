@@ -46,7 +46,7 @@ impl Serialize for Color {
             S: Serializer
     {
         let mut state = serializer.serialize_struct("Color", 1)?;
-        state.serialize_field("color", &format!("#{:x}{:x}{:x}", self.r, self.g, self.b))?;
+        state.serialize_field("color", &format!("#{:02x}{:02x}{:02x}", self.r, self.g, self.b))?;
         state.end()
     }
 }

@@ -106,6 +106,11 @@ impl<'a> TryFrom<MultiParametricCircle<'a>> for Circle<'a> {
         c.z = value.z.or(c.z);
         c.theta = value.theta.or(c.theta);
 
+        c.color = value.color.or(c.color);
+        if value.grad_begin.is_some() && value.grad_end.is_some() && value.grad_ratio.is_some() {
+            c.color = Some(Color::from_gradation(&value.grad_begin.unwrap(), &value.grad_end.unwrap(), value.grad_ratio.unwrap()));
+        }
+
         Ok(c)
     }
 }
