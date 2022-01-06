@@ -2,10 +2,10 @@ import React, { FC } from "react";
 
 type SeekBarProps = {
   value: number,
-  step: number,
-  min: number,
-  max: number,
-  onChangeHandler:
+  step?: number,
+  min?: number,
+  max?: number,
+  onChangeHandler?:
     | { (): void; (event: React.ChangeEvent<HTMLInputElement>): void }
     | (() => void)
     | ((event: React.ChangeEvent<HTMLInputElement>) => void);
@@ -16,7 +16,7 @@ const seekBarStyle: React.CSSProperties = {
   background: "#000000",
   borderRadius: 10,
 };
-export const SeekBar: FC<SeekBarProps> = ({ value, step, min, max, onChangeHandler }) => {
+export const SeekBar: FC<SeekBarProps> = ({ value, step=1, min=0, max=0, onChangeHandler=() => {} }) => {
   return (
     <input
       style={seekBarStyle}
