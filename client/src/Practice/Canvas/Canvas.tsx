@@ -28,7 +28,13 @@ type CircleType = {
   theta: number;
 };
 
-type ShapeType = RectType | CircleType;
+type PathType = {
+  shapeID: string;
+  color: string;
+  points: string;
+}
+
+type ShapeType = RectType | CircleType | PathType;
 
 type FrameType = {
   time: number;
@@ -225,7 +231,7 @@ export const Canvas: FC<CanvasProps> = () => {
             });
         }}
       />
-      <svg width="1000" height="1000" viewBox="0 0 10000 10000">
+      <svg width="1000" height="1000" viewBox="0 0 800 800">
         {Object.values(currentFrame.shapes)
           .sort((x, y) => x.z - y.z)
           .map((shape) => {
@@ -248,6 +254,15 @@ export const Canvas: FC<CanvasProps> = () => {
                   fill={shape.color}
                 />
               );
+            } else if (shape.shapeID[0] == "p") {
+              return (
+                <polyline
+                  fill="none"
+                  stroke={shape.color}
+                  strokeWidth={2}
+                  points={shape.points}
+                />
+              )
             }
           })}
       </svg>
