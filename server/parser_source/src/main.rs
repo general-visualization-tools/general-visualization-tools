@@ -112,26 +112,32 @@ fn main() -> Result<(), Box<dyn Error>> {
                     Err(format!("this number is invalid: {}", next_time))
                 }
             }
-            "chart" => {
-                charts.add_datum_by_words_and_setting(&mut words_iter, settings.get("chart").unwrap(), &ctx)?;
-                Ok(())
+            cmd => {
+                if let Some(setting) = settings.get(cmd) {
+                    match setting.use_parts.as_str() {
+                        "chart" => {
+                            charts.add_datum_by_words_and_setting(&mut words_iter, setting, &ctx)?;
+                            Ok(())
+                        }
+                        "rect" => {
+                            let rect = Rect::from_words_and_setting(&mut words_iter, setting, &ctx)?;
+                            canvases.add_rect(rect, &ctx);
+                            Ok(())
+                        },
+                        "circle" => {
+                            let circle = Circle::from_words_and_setting(&mut words_iter, setting, &ctx)?;
+                            canvases.add_circle(circle, &ctx);
+                            Ok(())
+                        }
+                        "path" => {
+                            let path = Path::from_words_and_setting(&mut words_iter, setting, &ctx)?;
+                            canvases.add_path(path, &ctx);
+                            Ok(())
+                        }
+                        parts_name => { Err(format!("this parts is not exists: {}", parts_name)) }
+                    }
+                } else { Err(format!("this command is not exists: {}", cmd))}
             }
-            "rect" => {
-                let rect = Rect::from_words_and_setting(&mut words_iter, settings.get("rect").unwrap(), &ctx)?;
-                canvases.add_rect(rect, &ctx);
-                Ok(())
-            },
-            "point" => {
-                let circle = Circle::from_words_and_setting(&mut words_iter, settings.get("point").unwrap(), &ctx)?;
-                canvases.add_circle(circle, &ctx);
-                Ok(())
-            }
-            "path" => {
-                let path = Path::from_words_and_setting(&mut words_iter, settings.get("path").unwrap(), &ctx)?;
-                canvases.add_path(path, &ctx);
-                Ok(())
-            }
-            cmd => { Err(format!("this command is not exists: {}", cmd)) }
         }?;
     }
 
