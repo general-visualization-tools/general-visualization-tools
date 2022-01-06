@@ -34,27 +34,17 @@ use std::collections::HashMap;
     'canvasID': {
       "initial": {
         "time": 0.,
-        "shapes": {
-          "shapeType$shapeID": {},
-          ...
-        }
+        "shapes": [{}, ...]
       }
       "final": {
         "time": 0.,
-        "shapes": {
-          "shapeType$shapeID": {},
-          ...
-        }
+        "shapes": [{}, ...]
       }
       "transitions": [
         {
           "time": num,
-          "diffs": [
-            {
-              "next": { "ID": "", ... },
-              "prev": { "ID": "", ... },
-            }
-          ]
+          "next": [{ "ID": "", ... }],
+          "prev": [{ "ID": "", ... }],
         }
       ]
     }

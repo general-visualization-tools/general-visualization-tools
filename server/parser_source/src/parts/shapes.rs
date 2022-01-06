@@ -1,4 +1,4 @@
-use serde::{Serialize};
+use serde::{ Serialize, Serializer, ser::SerializeStruct };
 use std::collections::HashMap;
 
 use crate::context::Context;
@@ -8,22 +8,28 @@ use crate::parts::basic_types::Number;
 use crate::parts::traits::VisualizableFrom;
 
 #[derive(Debug, Clone, Serialize)]
+struct ForDeletion<'a> {
+    #[serde(rename="shapeID")]
+    shape_id: &'a str
+}
+
+#[derive(Debug, Clone, Serialize)]
 #[serde(untagged)]
-enum Shape<'a> { Rect(Rect<'a>), Circle(Circle<'a>) }
+enum Shape<'a> { Rect(Rect<'a>), Circle(Circle<'a>), ForDeletion(ForDeletion<'a>) }
 
 #[derive(Debug)]
 struct Patch<'a> { time: Number, shape: Shape<'a> }
 
 #[derive(Debug, Serialize)]
-struct Diff<'a> { next: Shape<'a>, prev: Shape<'a> }
+#[serde(tag = "diffType")]
+enum Diff<'a> { Create(Shape<'a>), Update(Shape<'a>), Delete(Shape<'a>) }
 
 #[derive(Debug, Default, Serialize)]
-struct Transition<'a> { time: Number, diffs: Vec<Diff<'a>> }
+struct Transition<'a> { time: Number, prev: Vec<Diff<'a>>, next: Vec<Diff<'a>> }
 
-#[derive(Debug, Default, Clone, Serialize)]
+#[derive(Debug, Default, Clone)]
 struct Frame<'a> {
     time: Number,
-    #[serde(rename="shapes")]
     shape_id_to_shape: HashMap<&'a str, &'a Shape<'a>>
 }
 
@@ -40,20 +46,15 @@ pub struct Canvas<'a> {
 pub struct Canvases<'a> { patches_each_canvas: HashMap<&'a str, Vec<Patch<'a>>> }
 
 impl<'a> Shape<'a> {
-    fn get_shape_id(&self) -> &'a str { match self { Shape::Rect(r) => r.shape_id, Shape::Circle(c) => c.shape_id } }
-    fn get_diff_as_next_from(&self, prev_shape: &Shape<'a>) -> Diff<'a> {
-        match (self, prev_shape) {
-            (Shape::Rect(next_rect), Shape::Rect(prev_rect)) => {
-                Diff {
-                    next: Shape::Rect(next_rect.extract_diff_from(prev_rect)),
-                    prev: Shape::Rect(prev_rect.extract_diff_from(next_rect)),
-                }
+    fn get_shape_id(&self) -> &'a str { match self { Shape::Rect(r) => r.shape_id, Shape::Circle(c) => c.shape_id, Shape::ForDeletion(d) => d.shape_id } }
+    fn get_shape_for_deletion(&self) -> Shape { Shape::ForDeletion(ForDeletion { shape_id: self.get_shape_id() }) }
+    fn extract_diff_from(&self, other: &Self) -> Self {
+        match (self, other) {
+            (Shape::Rect(rect), Shape::Rect(other)) => {
+                Shape::Rect(rect.extract_diff_from(other))
             },
-            (Shape::Circle(next_circle), Shape::Circle(prev_circle)) => {
-                Diff {
-                    next: Shape::Circle(next_circle.extract_diff_from(prev_circle)),
-                    prev: Shape::Circle(prev_circle.extract_diff_from(next_circle)),
-                }
+            (Shape::Circle(circle), Shape::Circle(other)) => {
+                Shape::Circle(circle.extract_diff_from(other))
             },
             (_,_) => unreachable!("shapes isn't same")
         }
@@ -83,22 +84,44 @@ impl<'a> Canvases<'a> {
 
             let (mut canvas, final_frame, _) = grouped_patches.iter().fold((Canvas::default(), Frame::default(), true), |(mut canvas, current_frame, is_first), patches| {
                 let time = patches[0].time;
-                let (next_frame, transition) = patches.iter().fold((Frame { time, ..current_frame }, Transition { time, diffs: Vec::default() }), |(mut frame, mut transition), patch| {
-                    if let Some(diff) = frame.shape_id_to_shape.insert(patch.shape.get_shape_id(), &patch.shape)
-                        .map(|prev_shape| patch.shape.get_diff_as_next_from(prev_shape)) {
-                        transition.diffs.push(diff);
+                let (next_frame, transition) = patches.iter().fold((Frame { time, ..current_frame }, Transition { time, prev: Vec::default(), next: Vec::default() }), |(mut frame, mut transition), patch| {
+                    if let Some(prev_shape) = frame.shape_id_to_shape.insert(patch.shape.get_shape_id(), &patch.shape) {
+                        transition.next.push(Diff::Update(patch.shape.extract_diff_from(prev_shape)));
+                        transition.prev.push(Diff::Update(prev_shape.extract_diff_from(&patch.shape)));
+                    } else {
+                        transition.prev.push(Diff::Delete(patch.shape.get_shape_for_deletion()));
+                        transition.next.push(Diff::Create(patch.shape.clone()));
                     }
                     (frame, transition)
                 });
-                if is_first { canvas.initial_frame = next_frame.clone(); }
-                else { canvas.transitions.push(transition); }
+                if is_first {
+                    canvas.initial_frame = next_frame.clone();
+                    canvas.transitions.push(Transition { time, ..Transition::default() });
+                }
+                else {
+                    canvas.transitions.last_mut().unwrap().next = transition.next;
+                    canvas.transitions.push(Transition { time, prev: transition.prev, ..Transition::default() });
+                }
                 (canvas, next_frame, false)
             });
+
             canvas.final_frame = final_frame;
 
             result_map.insert(canvas_id, canvas);
 
             result_map
         })
+    }
+}
+
+impl<'a> Serialize for Frame<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error>
+        where
+            S: Serializer
+    {
+        let mut state = serializer.serialize_struct("Frame", 1)?;
+        state.serialize_field("time", &self.time)?;
+        state.serialize_field("shapes", &self.shape_id_to_shape.values().collect::<Vec<_>>())?;
+        state.end()
     }
 }
