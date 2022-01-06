@@ -3,6 +3,7 @@ pub mod color;
 
 pub mod traits;
 
+pub mod path;
 pub mod rect;
 pub mod circle;
 

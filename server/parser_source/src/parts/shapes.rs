@@ -2,10 +2,11 @@ use serde::{ Serialize, Serializer, ser::SerializeStruct };
 use std::collections::HashMap;
 
 use crate::context::Context;
-use crate::parts::rect::Rect;
-use crate::parts::circle::Circle;
-use crate::parts::basic_types::Number;
-use crate::parts::traits::VisualizableFrom;
+use super::path::Path;
+use super::rect::Rect;
+use super::circle::Circle;
+use super::basic_types::Number;
+use super::traits::VisualizableFrom;
 
 #[derive(Debug, Clone, Serialize)]
 struct ForDeletion<'a> {
@@ -15,7 +16,7 @@ struct ForDeletion<'a> {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(untagged)]
-enum Shape<'a> { Rect(Rect<'a>), Circle(Circle<'a>), ForDeletion(ForDeletion<'a>) }
+enum Shape<'a> { Rect(Rect<'a>), Circle(Circle<'a>), Path(Path<'a>), ForDeletion(ForDeletion<'a>) }
 
 #[derive(Debug)]
 struct Patch<'a> { time: Number, shape: Shape<'a> }
@@ -46,7 +47,14 @@ pub struct Canvas<'a> {
 pub struct Canvases<'a> { patches_each_canvas: HashMap<&'a str, Vec<Patch<'a>>> }
 
 impl<'a> Shape<'a> {
-    fn get_shape_id(&self) -> &'a str { match self { Shape::Rect(r) => r.shape_id, Shape::Circle(c) => c.shape_id, Shape::ForDeletion(d) => d.shape_id } }
+    fn get_shape_id(&self) -> &'a str {
+        match self {
+            Shape::Rect(r) => r.shape_id,
+            Shape::Circle(c) => c.shape_id,
+            Shape::Path(p) => p.shape_id,
+            Shape::ForDeletion(d) => d.shape_id,
+        }
+    }
     fn get_shape_for_deletion(&self) -> Shape { Shape::ForDeletion(ForDeletion { shape_id: self.get_shape_id() }) }
     fn extract_diff_from(&self, other: &Self) -> Self {
         match (self, other) {
@@ -56,6 +64,9 @@ impl<'a> Shape<'a> {
             (Shape::Circle(circle), Shape::Circle(other)) => {
                 Shape::Circle(circle.extract_diff_from(other))
             },
+            (Shape::Path(path), Shape::Path(other)) => {
+                Shape::Path(path.extract_diff_from(other))
+            }
             (_,_) => unreachable!("shapes isn't same")
         }
     }
@@ -70,6 +81,11 @@ impl<'a> Canvases<'a> {
     pub fn add_circle(&mut self, circle: Circle<'a>, ctx: &Context) {
         self.patches_each_canvas.entry(circle.canvas_id).or_insert(Vec::new())
             .push(Patch { time: ctx.current_time, shape: Shape::Circle(circle) });
+    }
+
+    pub fn add_path(&mut self, path: Path<'a>, ctx: &Context) {
+        self.patches_each_canvas.entry(path.canvas_id).or_insert(Vec::new())
+            .push( Patch { time: ctx.current_time, shape: Shape::Path(path) });
     }
 
     pub fn create_map(&'a mut self) -> HashMap<&'a str, Canvas> {

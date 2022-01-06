@@ -19,6 +19,7 @@ use parts::charts::Charts;
 use crate::parts::circle::Circle;
 use crate::parts::shapes::Canvases;
 use std::collections::HashMap;
+use crate::parts::path::Path;
 
 
 /*
@@ -97,7 +98,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut ctx = Context::default();
     let mut words_iter = words.iter();
-    let mut str_json = String::new();
     let mut charts = Charts::default();
     let mut canvases = Canvases::default();
 
@@ -118,16 +118,17 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
             "rect" => {
                 let rect = Rect::from_words_and_setting(&mut words_iter, settings.get("rect").unwrap(), &ctx)?;
-                // println!("{}", serde_json::to_string_pretty(&r).unwrap());
-                str_json += serde_json::to_string(&rect)?.as_str();
                 canvases.add_rect(rect, &ctx);
                 Ok(())
             },
             "point" => {
                 let circle = Circle::from_words_and_setting(&mut words_iter, settings.get("point").unwrap(), &ctx)?;
-                // println!("{}", serde_json::to_string_pretty(&c).unwrap());
-                str_json += serde_json::to_string(&circle)?.as_str();
                 canvases.add_circle(circle, &ctx);
+                Ok(())
+            }
+            "path" => {
+                let path = Path::from_words_and_setting(&mut words_iter, settings.get("path").unwrap(), &ctx)?;
+                canvases.add_path(path, &ctx);
                 Ok(())
             }
             cmd => { Err(format!("this command is not exists: {}", cmd)) }
