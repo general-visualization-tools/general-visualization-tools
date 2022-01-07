@@ -1,9 +1,16 @@
-import React, {FC, useRef, useState} from "react";
+import React, { FC, useRef, useState } from "react";
 import lodash from "lodash";
 import { SeekBar } from "../ui/SeekBar";
 import { Button } from "../ui/Button";
 
 type CanvasProps = {};
+
+type CameraType = {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+};
 
 type RectType = {
   shapeID: string;
@@ -32,7 +39,7 @@ type PathType = {
   shapeID: string;
   color: string;
   points: string;
-}
+};
 
 type ShapeType = RectType | CircleType | PathType;
 
@@ -52,6 +59,7 @@ type TransitionType = {
 };
 
 type CanvasType = {
+  camera: CameraType;
   initial: FrameType;
   final: FrameType;
   transitions: Array<TransitionType>;
@@ -111,18 +119,22 @@ const ControlArea: FC<ControlAreaProps> = ({
       if (!duringTransition) {
         return window.setInterval(() => {
           let nextCumulativeDiffStep =
-            cumulativeDiffStep.current + (intervalSPSRef.current * intervalMS) / 1000;
+            cumulativeDiffStep.current +
+            (intervalSPSRef.current * intervalMS) / 1000;
           const diffStep =
             Math.sign(nextCumulativeDiffStep) *
             Math.floor(Math.abs(nextCumulativeDiffStep));
           nextCumulativeDiffStep -= diffStep;
           cumulativeDiffStep.current = nextCumulativeDiffStep;
 
-          setCurrentStep(currentStep => {
-            const nextStep = Math.max(0, Math.min(maxStep-1, currentStep + diffStep));
+          setCurrentStep((currentStep) => {
+            const nextStep = Math.max(
+              0,
+              Math.min(maxStep - 1, currentStep + diffStep)
+            );
             frameUpdater(currentStep, nextStep);
             return nextStep;
-          })
+          });
         }, intervalMS);
       } else {
         clearInterval(currentIntervalID);
@@ -130,7 +142,7 @@ const ControlArea: FC<ControlAreaProps> = ({
       }
     });
 
-  if (duringTransition && currentStep == maxStep-1) intervalStateChanger();
+  if (duringTransition && currentStep == maxStep - 1) intervalStateChanger();
 
   return (
     <>
@@ -143,7 +155,10 @@ const ControlArea: FC<ControlAreaProps> = ({
           alignItems: "center",
         }}
       >
-        <Button msg={duringTransition ? "stop" : "start"} clickHandler={intervalStateChanger} />
+        <Button
+          msg={duringTransition ? "stop" : "start"}
+          clickHandler={intervalStateChanger}
+        />
         <div style={{ textAlign: "center" }}>
           <SeekBar
             value={intervalSPSRef.current}
@@ -158,17 +173,26 @@ const ControlArea: FC<ControlAreaProps> = ({
             value={currentStep}
             max={maxStep}
             onChangeHandler={(event: React.ChangeEvent<HTMLInputElement>) => {
-              setCurrentStep(currentStep => {
-                const nextStep = Math.max(0, Math.min(maxStep-1, parseInt(event.target.value)));
+              setCurrentStep((currentStep) => {
+                const nextStep = Math.max(
+                  0,
+                  Math.min(maxStep - 1, parseInt(event.target.value))
+                );
                 frameUpdater(currentStep, nextStep);
                 return nextStep;
-              })
+              });
             }}
           />
         </div>
         <div>
-          <p style={{ width: 200, textAlign: "left" }}> step per second: {intervalSPS} </p>
-          <p style={{ width: 200, textAlign: "left" }}> step: {currentStep} / {maxStep} th </p>
+          <p style={{ width: 200, textAlign: "left" }}>
+            {" "}
+            step per second: {intervalSPS}{" "}
+          </p>
+          <p style={{ width: 200, textAlign: "left" }}>
+            {" "}
+            step: {currentStep} / {maxStep} th{" "}
+          </p>
         </div>
       </div>
     </>
@@ -177,6 +201,7 @@ const ControlArea: FC<ControlAreaProps> = ({
 
 export const Canvas: FC<CanvasProps> = () => {
   const [canvas, setCanvas] = useState<CanvasType>({
+    camera: { x: 0, y: 0, w: 1000, h: 1000 },
     initial: lodash.cloneDeep(defaultFrame),
     final: lodash.cloneDeep(defaultFrame),
     transitions: [],
@@ -188,19 +213,17 @@ export const Canvas: FC<CanvasProps> = () => {
   const frameUpdater = (currentStep, nextStep) => {
     setCurrentFrame((currentFrame) => {
       const nextFrame = lodash.cloneDeep(currentFrame);
-      transitionFrame(
-        nextFrame,
-        canvas.transitions,
-        currentStep,
-        nextStep
-      );
+      transitionFrame(nextFrame, canvas.transitions, currentStep, nextStep);
       return nextFrame;
     });
   };
 
   return (
     <>
-      <ControlArea maxStep={Math.max(0, canvas.transitions.length - 1)} frameUpdater={frameUpdater} />
+      <ControlArea
+        maxStep={Math.max(0, canvas.transitions.length - 1)}
+        frameUpdater={frameUpdater}
+      />
       <p>
         {" "}
         now time is {currentFrame.time} / {canvas.final.time}{" "}
@@ -215,6 +238,7 @@ export const Canvas: FC<CanvasProps> = () => {
               const json = JSON.parse(original_data);
               console.log(json);
               const newCanvas: CanvasType = {
+                camera: json.camera,
                 initial: json.shapes.canvas0.initial,
                 final: json.shapes.canvas0.final,
                 transitions: json.shapes.canvas0.transitions,
@@ -231,7 +255,19 @@ export const Canvas: FC<CanvasProps> = () => {
             });
         }}
       />
-      <svg width="1000" height="1000" viewBox="0 0 800 800">
+      <svg
+        width="1000"
+        height="1000"
+        viewBox={
+          canvas.camera.x.toString() +
+          " " +
+          canvas.camera.y.toString() +
+          " " +
+          canvas.camera.w.toString() +
+          " " +
+          canvas.camera.h.toString()
+        }
+      >
         {Object.values(currentFrame.shapes)
           .sort((x, y) => x.z - y.z)
           .map((shape) => {
@@ -262,7 +298,7 @@ export const Canvas: FC<CanvasProps> = () => {
                   strokeWidth={2}
                   points={shape.points}
                 />
-              )
+              );
             }
           })}
       </svg>
