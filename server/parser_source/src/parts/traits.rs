@@ -1,7 +1,7 @@
 use std::error::Error;
 use core::slice::Iter;
 use std::convert::{TryFrom, TryInto};
-use crate::Setting;
+use crate::PartsSetting;
 use crate::context::Context;
 
 
@@ -26,7 +26,7 @@ where
 {
     fn set_by_param_name_and_word(&mut self, param_name: &'a str, word: &'a str, ctx: &Context) -> Result<(), Box<dyn Error>>;
 
-    fn default_by_setting(setting: &'a Setting, ctx: &Context) -> Result<Self, Box<dyn Error>> {
+    fn default_by_setting(setting: &'a PartsSetting, ctx: &Context) -> Result<Self, Box<dyn Error>> {
         let mut parts = Self::default();
         for (param_name, word) in &setting.default_values {
             parts.set_by_param_name_and_word(param_name.as_str(), word.as_str(), ctx)?;
@@ -34,7 +34,7 @@ where
         Ok(parts)
     }
 
-    fn from_words_and_setting(words_iter: &mut Iter<&'a str>, setting: &'a Setting, ctx: &Context) -> Result<Self, Box<dyn Error>> {
+    fn from_words_and_setting(words_iter: &mut Iter<&'a str>, setting: &'a PartsSetting, ctx: &Context) -> Result<Self, Box<dyn Error>> {
         let mut parts = Self::default_by_setting(setting, ctx)?;
         for params_name in setting.input_params.iter() {
             let next_word = *words_iter.next().ok_or(format!("words iter don't have more words. required: {}", params_name))?;
@@ -52,7 +52,7 @@ where
 {
     fn extract_diff_from(&self, other: &Self) -> Self;
 
-    fn from_words_and_setting(words_iter: &mut Iter<&'a str>, setting: &'a Setting, ctx: &Context) -> Result<Self, Box<dyn Error>> {
+    fn from_words_and_setting(words_iter: &mut Iter<&'a str>, setting: &'a PartsSetting, ctx: &Context) -> Result<Self, Box<dyn Error>> {
         From::from_words_and_setting(words_iter, setting, ctx)?.try_into().map_err(|e: <Self as TryFrom<From>>::Error| e.into())
     }
 }

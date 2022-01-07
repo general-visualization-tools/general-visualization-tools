@@ -7,7 +7,7 @@ use super::basic_types::Number;
 use super::color::{ Color };
 use super::traits::{ParsableBasedOnCtx, Visualizable, VisualizableFrom};
 use crate::context::Context;
-use crate::Setting;
+use crate::PartsSetting;
 
 fn format_f32_data<S>(v: &Option<Vec<Number>>, s: S) -> Result<S::Ok, S::Error> where S: Serializer {
     let b = v.as_ref().unwrap();
@@ -127,7 +127,7 @@ impl<'a> Visualizable<'a> for MultiParametricPath<'a> {
         }
     }
 
-    fn default_by_setting(setting: &'a Setting, ctx: &Context) -> Result<Self, Box<dyn Error>> {
+    fn default_by_setting(setting: &'a PartsSetting, ctx: &Context) -> Result<Self, Box<dyn Error>> {
         let mut parts = Self::default();
         for (param_name, word) in &setting.default_values {
             if param_name == "points" {
@@ -140,7 +140,7 @@ impl<'a> Visualizable<'a> for MultiParametricPath<'a> {
         Ok(parts)
     }
 
-    fn from_words_and_setting(words_iter: &mut Iter<&'a str>, setting: &'a Setting, ctx: &Context) -> Result<Self, Box<dyn Error>> {
+    fn from_words_and_setting(words_iter: &mut Iter<&'a str>, setting: &'a PartsSetting, ctx: &Context) -> Result<Self, Box<dyn Error>> {
         let mut parts = Self::default_by_setting(setting, ctx)?;
         for param_name in setting.input_params.iter() {
             if param_name == "points" { parts.set_points(words_iter, ctx)?; }

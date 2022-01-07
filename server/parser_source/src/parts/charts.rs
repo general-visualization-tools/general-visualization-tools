@@ -3,7 +3,7 @@ use std::error::Error;
 use core::slice::Iter;
 use std::collections::HashMap;
 
-use crate::setting::Setting;
+use crate::setting::PartsSetting;
 use crate::context::Context;
 use super::color::{ Color, Palette };
 use super::basic_types::Number;
@@ -93,7 +93,7 @@ impl<'a> Charts<'a> {
         let chart = self.charts.get_mut(&key).unwrap();
         chart.merge_datum(datum);
     }
-    pub fn add_datum_by_words_and_setting(&mut self, words_iter: &mut Iter<&'a str>, setting: &'a Setting, ctx: &Context) -> Result<(), Box<dyn Error>> {
+    pub fn add_datum_by_words_and_setting(&mut self, words_iter: &mut Iter<&'a str>, setting: &'a PartsSetting, ctx: &Context) -> Result<(), Box<dyn Error>> {
         let mut datum = DatumForChart::default_by_setting(setting, ctx)?;
 
         for params_name in setting.input_params.iter() {

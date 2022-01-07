@@ -12,7 +12,7 @@ use docopt::Docopt;
 use serde::{ Deserialize };
 
 use context::Context;
-use setting::{ load_settings, Setting };
+use setting::{load_settings, PartsSetting};
 use parts::rect::{ Rect };
 use parts::traits::*;
 use parts::charts::Charts;
@@ -113,7 +113,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 }
             }
             cmd => {
-                if let Some(setting) = settings.get(cmd) {
+                if let Some(setting) = settings.parts.get(cmd) {
                     match setting.use_parts.as_str() {
                         "chart" => {
                             charts.add_datum_by_words_and_setting(&mut words_iter, setting, &ctx)?;
@@ -145,6 +145,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut file = File::create(output_dest)?;
     let mut result = HashMap::new();
+    result.insert("camera", serde_json::to_value(settings.camera)?);
     result.insert("charts", serde_json::to_value(charts.create_map())?);
     result.insert("shapes", serde_json::to_value(canvases.create_map())?);
     writeln!(file, "{}", serde_json::to_string(&result)?)?;
