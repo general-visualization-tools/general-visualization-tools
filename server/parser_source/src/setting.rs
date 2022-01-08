@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize, Deserializer};
+use serde::{ Deserialize, Deserializer };
 use std::collections::HashMap;
 use std::fs::read_to_string;
 use std::error::Error;
@@ -6,31 +6,37 @@ use std::error::Error;
 use crate::consts::PARTS_NAMES;
 
 
-#[derive(Debug)]
+#[derive(Debug, Default, Deserialize)]
 pub struct Settings {
-    pub parts: HashMap<String, PartsSetting>,
-    pub camera: CameraSetting,
+    #[serde(rename="commands", default="HashMap::new")]
+    pub command_to_setting: HashMap<String, GraphicPartsSetting>,
+    #[serde(rename="initialText", default="String::new", deserialize_with = "initial_text_deserializer")]
+    pub initial_text: String,
 }
 
-fn default_0i32() -> i32 { 0 }
-fn default_1000usize() -> usize { 1000 }
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct CameraSetting {
-    #[serde(default="default_0i32")]
-    x: i32,
-    #[serde(default="default_0i32")]
-    y: i32,
-    #[serde(default="default_1000usize")]
-    w: usize,
-    #[serde(default="default_1000usize")]
-    h: usize,
+fn initial_text_deserializer<'de, D>(deserializer: D) -> Result<String, D::Error>
+    where
+        D: Deserializer<'de>
+{
+    let tmp = <serde_json::Value>::deserialize(deserializer).map_err(serde::de::Error::custom)?;
+    if let Some(s) = tmp.as_str() {
+        Ok(s.to_string())
+    } else if let Some(v) = tmp.as_array() {
+        for x in v { if !x.is_string() { return Err("initial text must be string or [string]").map_err(serde::de::Error::custom) } }
+        Ok(v.iter()
+            .map(|x|x.as_str().unwrap())
+            .collect::<Vec<_>>()
+            .join(" "))
+    } else {
+        Err("initial text must be string or [string]").map_err(serde::de::Error::custom)
+    }
 }
 
-#[derive(Deserialize, Debug)]
-pub struct PartsSetting {
-    #[serde(rename="useParts")]
-    pub use_parts: String,
+
+#[derive(Debug, Deserialize)]
+pub struct GraphicPartsSetting {
+    #[serde(rename="useElem")]
+    pub use_elem: String,
     #[serde(rename="defaults", default="HashMap::new", deserialize_with = "defaults_value_deserializer")]
     pub default_values: HashMap<String, String>,
     #[serde(rename="inputs", default="Vec::new")]
@@ -49,36 +55,14 @@ fn defaults_value_deserializer<'de, D>(deserializer: D) -> Result<HashMap<String
     Ok(result)
 }
 
-impl Default for Settings { fn default() -> Self { Self { parts: HashMap::new(), camera: CameraSetting::default() } } }
-impl Default for CameraSetting { fn default() -> Self { Self { x: 0, y: 0, w: 1000, h: 1000 } } }
-
 pub fn load_settings(path: &str) -> Result<Settings, Box<dyn Error>> {
-    let mut settings = Settings::default();
+    let settings: Settings = serde_json::from_str(&read_to_string(path)?)?;
 
-    let raw_settings: serde_json::Map<String, serde_json::Value> = serde_json::from_str(&read_to_string(path)?)?;
-    // let raw_settings: serde_json::Value = serde_json::from_str(&read_to_string(path)?)?;
-    // let raw_settings = raw_settings.as_object().ok_or("settings must be object")?;
-
-
-    // load parts settings
-    {
-        let parts_settings = raw_settings.get("commands").ok_or("commands is not exists")?.as_object().ok_or("commands must be object")?;
-        let mut checked_parts_settings = HashMap::new();
-        for (parts_name, value) in parts_settings {
-            let setting: PartsSetting = serde_json::from_value(value.clone())?;
-
-            let use_parts_name = setting.use_parts.as_str();
-            if !PARTS_NAMES.iter().any(|&x| x == use_parts_name) {
-                return Result::Err(format!("{}'s useParts is not exists: {}", parts_name, use_parts_name).into());
-            }
-
-            checked_parts_settings.insert(parts_name.clone(), setting);
+    for (elem_name, setting) in &settings.command_to_setting {
+        if !PARTS_NAMES.contains(setting.use_elem.as_str()) {
+            return Result::Err(format!("{}'s useElem is invalid: {}", elem_name, setting.use_elem).into());
         }
-        settings.parts = checked_parts_settings;
     }
-
-    // load camera settings
-    settings.camera = if let Some(v) = raw_settings.get("camera") { serde_json::from_value(v.clone())? } else { CameraSetting::default() };
 
     Ok(settings)
 }

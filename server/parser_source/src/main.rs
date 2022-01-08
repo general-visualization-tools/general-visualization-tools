@@ -2,7 +2,7 @@ mod context;
 mod setting;
 mod consts;
 mod utils;
-mod parts;
+mod vis_comps;
 
 use std::fs::{read_to_string, File};
 use std::error::Error;
@@ -12,40 +12,37 @@ use docopt::Docopt;
 use serde::{ Deserialize };
 
 use context::Context;
-use setting::{load_settings, PartsSetting};
-use parts::rect::{ Rect };
-use parts::traits::*;
-use parts::charts::Charts;
-use crate::parts::circle::Circle;
-use crate::parts::shapes::Canvases;
-use std::collections::HashMap;
-use crate::parts::path::Path;
+use setting::{load_settings, GraphicPartsSetting};
+use vis_comps::vis_comps_creator::VisCompsCreator;
+use vis_comps::traits::ParsableBasedOnCtx;
 
 
 /*
 {
-  'charts': {
-    'canvasID': [
+  $groupID: {
+    camera?: { x,y,w,h }
+    charts?: {
+      $lineID: {
         { "name": "", "data": [[x,y], [x,y], ], "color": "#000000" }
         { "name": "", "data": [y,y,y,y ], "color": "#000000" }
         ...
-    ]
-  }
-  'shapes': {
-    'canvasID': {
+      }
+      ...
+    },
+    graphic?: {
       "initial": {
-        "time": 0.,
-        "shapes": [{}, ...]
+        "time": num,
+        "elems": [{}, ...]
       }
       "final": {
-        "time": 0.,
-        "shapes": [{}, ...]
+        "time": num,
+        "elems": [{}, ...]
       }
       "transitions": [
         {
           "time": num,
-          "next": [{ "ID": "", ... }],
-          "prev": [{ "ID": "", ... }],
+          "next": [{ "elemID": "", ... }],
+          "prev": [{ "elemID": "", ... }],
         }
       ]
     }
@@ -87,68 +84,43 @@ fn main() -> Result<(), Box<dyn Error>> {
     let output_dest = args.flag_output;
     let settings_path = args.flag_settings.as_str();
 
-    let content = read_to_string(content_path)?;
-    let words = content.split_whitespace().collect::<Vec<_>>();
-
     let settings = load_settings(settings_path)?;
 
-    // println!("settings: {:?}", settings);
+    let content = settings.initial_text + " " + read_to_string(content_path)?.as_str();
+    let words = content.split_whitespace().collect::<Vec<_>>();
 
-    println!("\n ======================= \n");
+    println!("\n ===== now parsing ===== \n");
 
     let mut ctx = Context::default();
     let mut words_iter = words.iter();
-    let mut charts = Charts::default();
-    let mut canvases = Canvases::default();
+    let mut vis_comps_creator = VisCompsCreator::default();
 
-    while let Some(&shape) = words_iter.next() {
-        match shape {
+    while let Some(&command) = words_iter.next() {
+        match command {
             "update" => {
                 let next_time: f64 = words_iter.next().ok_or("words iter don't have more words. required: time")?.parse_based_on(&ctx)?;
-                if next_time.is_finite() {
-                    ctx.update_time(next_time);
-                    Ok(())
-                } else {
-                    Err(format!("this number is invalid: {}", next_time))
-                }
+                if next_time.is_finite() { ctx.update_time(next_time); Ok(()) }
+                else { Err(format!("this number is invalid: {}", next_time).into()) }
             }
-            cmd => {
-                if let Some(setting) = settings.parts.get(cmd) {
-                    match setting.use_parts.as_str() {
-                        "chart" => {
-                            charts.add_datum_by_words_and_setting(&mut words_iter, setting, &ctx)?;
-                            Ok(())
-                        }
-                        "rect" => {
-                            let rect = Rect::from_words_and_setting(&mut words_iter, setting, &ctx)?;
-                            canvases.add_rect(rect, &ctx);
-                            Ok(())
-                        },
-                        "circle" => {
-                            let circle = Circle::from_words_and_setting(&mut words_iter, setting, &ctx)?;
-                            canvases.add_circle(circle, &ctx);
-                            Ok(())
-                        }
-                        "path" => {
-                            let path = Path::from_words_and_setting(&mut words_iter, setting, &ctx)?;
-                            canvases.add_path(path, &ctx);
-                            Ok(())
-                        }
-                        parts_name => { Err(format!("this parts is not exists: {}", parts_name)) }
+            command => {
+                if let Some(setting) = settings.command_to_setting.get(command) {
+                    match setting.use_elem.as_str() {
+                        "chart"  => { vis_comps_creator.add_line_datum_from(&mut words_iter, setting, &ctx) }
+                        "camera" => { vis_comps_creator.add_camera_from    (&mut words_iter, setting, &ctx) }
+                        "circle" => { vis_comps_creator.add_circle_from    (&mut words_iter, setting, &ctx) }
+                        "path"   => { vis_comps_creator.add_path_from      (&mut words_iter, setting, &ctx) }
+                        "rect"   => { vis_comps_creator.add_rect_from      (&mut words_iter, setting, &ctx) }
+                        parts_name => { Err(format!("this parts is not exists: {}", parts_name).into()) }
                     }
-                } else { Err(format!("this command is not exists: {}", cmd))}
+                } else { Err(format!("this command is not exists: {}", command).into()) }
             }
         }?;
     }
 
-    println!("\n ======================= \n");
+    println!("\n ====== completed ====== \n");
 
     let mut file = File::create(output_dest)?;
-    let mut result = HashMap::new();
-    result.insert("camera", serde_json::to_value(settings.camera)?);
-    result.insert("charts", serde_json::to_value(charts.create_map())?);
-    result.insert("shapes", serde_json::to_value(canvases.create_map())?);
-    writeln!(file, "{}", serde_json::to_string(&result)?)?;
+    writeln!(file, "{}", vis_comps_creator.create_json_string()?)?;
     file.flush()?;
 
     Ok(())

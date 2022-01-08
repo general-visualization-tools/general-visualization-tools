@@ -1,18 +1,19 @@
 use serde::{Serialize};
 use std::error::Error;
+use std::slice::Iter;
 use std::convert::TryFrom;
-
-use super::basic_types::Number;
-use super::color::{ Color };
-use super::traits::{ParsableBasedOnCtx, Visualizable, VisualizableFrom};
 use crate::context::Context;
+use crate::setting::GraphicPartsSetting;
+use super::super::graphic_elems::Elem;
+use super::super::common_types::{ number::Number, color::Color };
+use super::super::traits::{ParsableBasedOnCtx, Visualizable, VisualizableFrom, ConvertableGraphicElem};
 
 #[derive(Serialize, Clone, Debug)]
 pub struct Rect<'a> {
     #[serde(skip)]
-    pub(in super) canvas_id: &'a str,
-    #[serde(rename="shapeID")]
-    pub(in super) shape_id: &'a str,
+    pub(in super::super) group_id: &'a str,
+    #[serde(rename="elemID")]
+    pub(in super::super) elem_id: &'a str,
 
     #[serde(flatten, skip_serializing_if = "Option::is_none")]
     color: Option<Color>,
@@ -32,9 +33,9 @@ pub struct Rect<'a> {
 }
 
 #[derive(Debug)]
-pub struct MultiParametricRect<'a> {
-    canvas_id: &'a str,
-    shape_id:  &'a str,
+struct MultiParametricRect<'a> {
+    group_id: &'a str,
+    elem_id:  &'a str,
 
     color:      Option<Color>,
     grad_begin: Option<Color>,
@@ -58,8 +59,8 @@ pub struct MultiParametricRect<'a> {
 impl Default for Rect<'_> {
     fn default() -> Self {
         Self {
-            canvas_id: "canvas0",
-            shape_id : "rect0",
+            group_id: "group0",
+            elem_id:  "rect0",
             color: Some(Default::default()),
             x: Some(0.),
             y: Some(0.),
@@ -74,8 +75,8 @@ impl Default for Rect<'_> {
 impl Default for MultiParametricRect<'_> {
     fn default() -> Self {
         Self {
-            canvas_id: "canvas0",
-            shape_id : "rect0",
+            group_id: "group0",
+            elem_id:  "rect0",
 
             color     : Some(Color::default()),
             grad_begin: None,
@@ -111,8 +112,8 @@ impl<'a> TryFrom<MultiParametricRect<'a>> for Rect<'a> {
         // 値が不正(w,hがマイナスなど)の時にどこでチェックをするかを考える
 
         let mut r = Rect {
-            canvas_id: value.canvas_id,
-            shape_id : value.shape_id,
+            group_id: value.group_id,
+            elem_id:  value.elem_id,
             ..Default::default()
         };
 
@@ -156,8 +157,8 @@ impl<'a> TryFrom<MultiParametricRect<'a>> for Rect<'a> {
 impl<'a> Visualizable<'a> for MultiParametricRect<'a> {
     fn set_by_param_name_and_word(&mut self, param_name: &'a str, word: &'a str, ctx: &Context) -> Result<(), Box<dyn Error>> {
         match param_name {
-            "canvasID"  => { self.canvas_id  = word;                            Ok(()) },
-            "shapeID"   => { self.shape_id   = word;                            Ok(()) },
+            "groupID"   => { self.group_id = word; Ok(()) },
+            "elemID"    => { self.elem_id  = word; Ok(()) },
 
             "color"     => { self.color      = Some(word.parse_based_on(ctx)?); Ok(()) },
             "gradBegin" => { self.grad_begin = Some(word.parse_based_on(ctx)?); Ok(()) },
@@ -181,11 +182,16 @@ impl<'a> Visualizable<'a> for MultiParametricRect<'a> {
     }
 }
 
-impl<'a> VisualizableFrom<'a, MultiParametricRect<'a>> for Rect<'a> {
+// todo: default実装飲みなのでimplを書かなくてもいいようにできるかどうか確かめる
+impl<'a> VisualizableFrom<'a, MultiParametricRect<'a>> for Rect<'a> {}
+
+impl<'a> ConvertableGraphicElem<'a> for Rect<'a> {
+    fn get_group_id(&self) -> &'a str { self.group_id }
+    fn convert_to_elem(self) -> Elem<'a> { Elem::Rect(self) }
     fn extract_diff_from(&self, other: &Self) -> Self {
         Self {
-            canvas_id: self.canvas_id,
-            shape_id: self.shape_id,
+            group_id: self.group_id,
+            elem_id:  self.elem_id,
             color: if self.color == other.color { None } else { self.color.clone() },
             x:     if self.x     == other.x     { None } else { self.x },
             y:     if self.y     == other.y     { None } else { self.y },
@@ -194,5 +200,8 @@ impl<'a> VisualizableFrom<'a, MultiParametricRect<'a>> for Rect<'a> {
             z:     if self.z     == other.z     { None } else { self.z },
             theta: if self.theta == other.theta { None } else { self.theta },
         }
+    }
+    fn from_words_and_setting(words_iter: &mut Iter<&'a str>, setting: &'a GraphicPartsSetting, ctx: &Context) -> Result<Self, Box<dyn Error>> {
+        VisualizableFrom::<'a, MultiParametricRect<'a>>::from_words_and_setting(words_iter, setting, ctx)
     }
 }

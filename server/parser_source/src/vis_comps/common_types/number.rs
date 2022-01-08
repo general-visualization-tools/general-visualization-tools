@@ -1,8 +1,7 @@
 use std::error::Error;
 use std::num::ParseFloatError;
-
-use super::traits::FromStrBasedOnCtx;
 use crate::context::Context;
+use super::super::traits::FromStrBasedOnCtx;
 
 pub type Number = f64;
 
