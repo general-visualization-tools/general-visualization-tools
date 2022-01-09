@@ -12,6 +12,8 @@ use super::traits::Visualizable;
 
 #[derive(Debug, Default, Serialize)]
 struct VisComps<'a> {
+    #[serde(rename="groupID")]
+    group_id: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
     graphic: Option<Graphic<'a>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -54,17 +56,17 @@ impl<'a> VisCompsCreator<'a> {
     pub fn create_json_string(&'a mut self) -> Result<String, serde_json::Error> {
         let group_id_to_vis_comps = self.group_id_to_graphic_creator.iter_mut().fold(
             self.group_id_to_chart_creator.iter_mut().fold( HashMap::new(), |mut map, (&group_id, creator)| {
-                map.insert(group_id, VisComps { graphic: None, chart: Some(creator.create_chart()) });
+                map.insert(group_id, VisComps { group_id, graphic: None, chart: Some(creator.create_chart()) });
                 map
             }),
             |mut map, (&group_id, creator)| {
-                map.entry(group_id).or_insert_with( VisComps::default)
+                map.entry(group_id).or_insert_with(|| VisComps { group_id, ..VisComps::default() })
                     .graphic = Some(creator.create_graphic());
                 map
             }
         );
 
-        serde_json::to_string(&group_id_to_vis_comps)
+        serde_json::to_string(&group_id_to_vis_comps.values().collect::<Vec<_>>())
     }
 
 }
