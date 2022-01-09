@@ -5,23 +5,14 @@ use crate::context::Context;
 use super::traits::{ ParsableBasedOnCtx, Visualizable };
 use super::common_types::{ number::Number, point::Point, color::{ Color, Palette } };
 
-/*
-{
-  'groupID': [
-    { "name": "", "data": [[x,y], [x,y], ], "color": "#000000" }
-    { "name": "", "data": [y,y,y,y ], "color": "#000000" }
-    ...
-  ]
-}
-*/
-
 #[derive(Debug, Default)]
-pub struct ChartCreator<'a> { chart: Chart<'a> }
+pub struct ChartCreator<'a> {
+    line_id_to_line: HashMap<&'a str, Line<'a>>,
+}
 
 #[derive(Debug, Default, Clone, Serialize)]
 pub struct Chart<'a> {
-    #[serde(flatten)]
-    line_id_to_line: HashMap<&'a str, Line<'a>>
+    lines: Vec<Line<'a>>
 }
 
 // xが0-indexedで連番ならyだけのデータにし、それ以外なら[[$x, $y]...]の形式でserialize
@@ -89,16 +80,18 @@ impl<'a> Visualizable<'a> for LineDatum<'a> {
 
 impl<'a> ChartCreator<'a> {
     pub fn add_line_datum(&mut self, datum: LineDatum<'a>) {
-        let mut line = self.chart.line_id_to_line.entry(datum.line_id).or_insert_with(Line::default);
+        let mut line = self.line_id_to_line.entry(datum.line_id).or_insert_with(
+            || Line { line_id: datum.line_id, ..Line::default() }
+        );
         if let Some(color) = datum.color { line.color = color; }
         if let (Some(x), Some(y)) = (datum.x, datum.y) {
             line.data.push(Point { x, y });
         }
     }
     pub fn create_chart(&mut self) -> Chart<'a> {
-        for line in self.chart.line_id_to_line.values_mut() {
+        for line in self.line_id_to_line.values_mut() {
             line.data.sort_by(|p, other| p.x.partial_cmp(&other.x).unwrap());
         }
-        self.chart.clone()
+        Chart { lines: self.line_id_to_line.values().map(|x| x.clone()).collect() }
     }
 }

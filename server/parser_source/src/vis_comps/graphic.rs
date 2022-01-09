@@ -81,7 +81,7 @@ impl<'a> Serialize for Frame<'a> {
         where
             S: Serializer
     {
-        let mut state = serializer.serialize_struct("Frame", 1)?;
+        let mut state = serializer.serialize_struct("Frame", 2)?;
         state.serialize_field("time", &self.time)?;
         state.serialize_field("elems", &self.elem_id_to_elem.values().collect::<Vec<_>>())?;
         state.end()
