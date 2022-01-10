@@ -1,5 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom";
-import { App } from "./Practice";
+// import { App } from "./Practice";
+import { Visualization } from "./pages/Visualization";
 import "destyle.css";
-ReactDOM.render(<App />, document.getElementById("root") as HTMLElement);
+ReactDOM.render(<Visualization />, document.getElementById("root") as HTMLElement);
