@@ -3,10 +3,9 @@ use core::slice::Iter;
 use std::convert::{TryFrom, TryInto};
 use crate::GraphicPartsSetting;
 use crate::context::Context;
-use super::graphic_elems::Elem;
 
 
-// FromStrBasedOnCtxを実装すれば "...".from_str_based_on(ctx)で文字列を任意の型にパースすることができるようになる
+// if you implement FromStrBasedOnCtx trait to a type, you can parse string to the type by "...".from_str_based_on(ctx)
 
 pub trait FromStrBasedOnCtx where Self: Sized { fn from_str_based_on(s: &str, ctx: &Context) -> Result<Self, Box<dyn Error>>; }
 pub trait ParsableBasedOnCtx<To: FromStrBasedOnCtx> { fn parse_based_on(&self, ctx: &Context) -> Result<To, Box<dyn Error>>; }
@@ -17,9 +16,7 @@ impl<To: FromStrBasedOnCtx> ParsableBasedOnCtx<To> for &str {
 }
 
 
-// visualize用要素に変換するためのクラスのトレイト
-// Visualizableはそれ単体で変換可能で、VisualizableByはVisualizableなFromをTryFromで変換して生成する
-// set_by_param_name_and_word以外はデフォルト実装があるので基本はこれだけ実装すれば良い
+// if you implement set_by_param_name_and_word to a type, you can parse words_iter to the type.
 
 pub trait Visualizable<'a>
 where
@@ -54,14 +51,4 @@ where
     fn from_words_and_setting(words_iter: &mut Iter<&'a str>, setting: &'a GraphicPartsSetting, ctx: &Context) -> Result<Self, Box<dyn Error>> {
         From::from_words_and_setting(words_iter, setting, ctx)?.try_into().map_err(|e: <Self as TryFrom<From>>::Error| e.into())
     }
-}
-
-pub trait ConvertableGraphicElem<'a>
-where
-    Self: Sized
-{
-    fn get_group_id(&self) -> &'a str;
-    fn convert_to_elem(self) -> Elem<'a>;
-    fn extract_diff_from(&self, other: &Self) -> Self;
-    fn from_words_and_setting(words_iter: &mut Iter<&'a str>, setting: &'a GraphicPartsSetting, ctx: &Context) -> Result<Self, Box<dyn Error>>;
 }

@@ -92,6 +92,6 @@ impl<'a> ChartCreator<'a> {
         for line in self.line_id_to_line.values_mut() {
             line.data.sort_by(|p, other| p.x.partial_cmp(&other.x).unwrap());
         }
-        Chart { lines: self.line_id_to_line.values().map(|x| x.clone()).collect() }
+        Chart { lines: self.line_id_to_line.values().cloned().collect() }
     }
 }

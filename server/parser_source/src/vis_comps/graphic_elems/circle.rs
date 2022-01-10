@@ -1,19 +1,20 @@
 use serde::{Serialize};
 use std::error::Error;
-use core::slice::Iter;
 use std::convert::TryFrom;
 use crate::context::Context;
-use crate::GraphicPartsSetting;
-use super::super::graphic_elems::Elem;
+use super::super::unique_id_generator::UID;
 use super::super::common_types::{ number::Number, color::Color };
-use super::super::traits::{ParsableBasedOnCtx, Visualizable, VisualizableFrom, ConvertableGraphicElem};
+use super::super::traits::{ParsableBasedOnCtx, Visualizable, VisualizableFrom };
+use super::elems::{ Elem, ElementTrait };
 
 #[derive(Serialize, Clone, Debug)]
 pub struct Circle<'a>  {
+    #[serde(flatten)]
+    pub (in super) unique_id: UID,
     #[serde(skip)]
-    pub(in super::super) group_id: &'a str,
-    #[serde(rename="elemID")]
-    pub(in super::super) elem_id: &'a str,
+    pub group_id: &'a str,
+    #[serde(skip_serializing_if = "str::is_empty")]
+    pub (in super) name: &'a str,
 
     #[serde(flatten, skip_serializing_if = "Option::is_none")]
     color: Option<Color>,
@@ -31,9 +32,10 @@ pub struct Circle<'a>  {
 }
 
 #[derive(Debug)]
-struct MultiParametricCircle<'a> {
-    group_id: &'a str,
-    elem_id:  &'a str,
+pub struct MultiParametricCircle<'a> {
+    unique_id: UID,
+    group_id:  &'a str,
+    name:      &'a str,
 
     color:      Option<Color>,
     grad_begin: Option<Color>,
@@ -50,8 +52,9 @@ struct MultiParametricCircle<'a> {
 impl Default for Circle<'_> {
     fn default() -> Self {
         Self {
-            group_id: "group0",
-            elem_id:  "circle0",
+            unique_id: UID::unset(),
+            group_id:  "group0",
+            name:      "circle0",
 
             color: Some(Color::default()),
 
@@ -67,8 +70,9 @@ impl Default for Circle<'_> {
 impl Default for MultiParametricCircle<'_> {
     fn default() -> Self {
         Self {
-            group_id: "group0",
-            elem_id:  "circle0",
+            unique_id: UID::unset(),
+            group_id:  "group0",
+            name:      "circle0",
 
             color:      None,
             grad_begin: None,
@@ -96,8 +100,9 @@ impl<'a> TryFrom<MultiParametricCircle<'a>> for Circle<'a> {
         // 値が不正(rがマイナスなど)の時にどこでチェックをするかを考える
 
         let mut c = Circle {
-            group_id: value.group_id,
-            elem_id:  value.elem_id,
+            unique_id: value.unique_id,
+            group_id:  value.group_id,
+            name:      value.name,
             ..Default::default()
         };
 
@@ -120,7 +125,7 @@ impl<'a> Visualizable<'a> for MultiParametricCircle<'a> {
     fn set_by_param_name_and_word(&mut self, param_name: &'a str, word: &'a str, ctx: &Context) -> Result<(), Box<dyn Error>> {
         match param_name {
             "groupID"   => { self.group_id = word; Ok(()) },
-            "elemID"    => { self.elem_id  = word; Ok(()) },
+            "name"      => { self.name     = word; Ok(()) },
 
             "color"     => { self.color      = Some(word.parse_based_on(ctx)?); Ok(()) },
             "gradBegin" => { self.grad_begin = Some(word.parse_based_on(ctx)?); Ok(()) },
@@ -137,27 +142,23 @@ impl<'a> Visualizable<'a> for MultiParametricCircle<'a> {
     }
 }
 
-// todo: default実装飲みなのでimplを書かなくてもいいようにできるかどうか確かめる
+// todo: default実装のみなのでimplを書かなくてもいいようにできるかどうか確かめる
 impl<'a> VisualizableFrom<'a, MultiParametricCircle<'a>> for Circle<'a> {}
 
-impl<'a> ConvertableGraphicElem<'a> for Circle<'a> {
-    fn get_group_id(&self) -> &'a str { self.group_id }
+impl<'a> ElementTrait<'a> for Circle<'a> {
     fn convert_to_elem(self) -> Elem<'a> { Elem::Circle(self) }
     fn extract_diff_from(&self, other: &Self) -> Self {
         Self {
-            group_id: self.group_id,
-            elem_id: self.elem_id,
-            color: if self.color == other.color { None } else { self.color.clone() },
-            x:     if self.x     == other.x     { None } else { self.x },
-            y:     if self.y     == other.y     { None } else { self.y },
-            r:     if self.r     == other.r     { None } else { self.r },
-            z:     if self.z     == other.z     { None } else { self.z },
-            theta: if self.theta == other.theta { None } else { self.theta },
+            unique_id: self.unique_id,
+            group_id: if self.group_id == other.group_id { "" } else { self.group_id },
+            name:     if self.name     == other.name     { "" } else { self.name },
+            color:  if self.color == other.color { None } else { self.color.clone() },
+            x:      if self.x     == other.x     { None } else { self.x },
+            y:      if self.y     == other.y     { None } else { self.y },
+            r:      if self.r     == other.r     { None } else { self.r },
+            z:      if self.z     == other.z     { None } else { self.z },
+            theta:  if self.theta == other.theta { None } else { self.theta },
         }
     }
-    fn from_words_and_setting(words_iter: &mut Iter<&'a str>, setting: &'a GraphicPartsSetting, ctx: &Context) -> Result<Self, Box<dyn Error>> {
-        VisualizableFrom::<'a, MultiParametricCircle<'a>>::from_words_and_setting(words_iter, setting, ctx)
-    }
 }
-
 

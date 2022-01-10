@@ -4,9 +4,10 @@ use std::error::Error;
 use core::slice::Iter;
 use crate::GraphicPartsSetting;
 use crate::context::Context;
-use super::super::graphic_elems::Elem;
+use super::super::unique_id_generator::UID;
 use super::super::common_types::{ number::Number, point::Point, color::Color };
-use super::super::traits::{ParsableBasedOnCtx, Visualizable, VisualizableFrom, ConvertableGraphicElem};
+use super::super::traits::{ ParsableBasedOnCtx, Visualizable, VisualizableFrom };
+use super::elems::{ Elem, ElementTrait };
 
 // svgで使いやすいように(x,y)...の空白区切りの文字列にする
 fn serialize_points<S>(v: &Option<Vec<Point>>, s: S) -> Result<S::Ok, S::Error> where S: Serializer {
@@ -17,28 +18,35 @@ fn serialize_points<S>(v: &Option<Vec<Point>>, s: S) -> Result<S::Ok, S::Error> 
 
 #[derive(Serialize, Clone, Debug)]
 pub struct Path<'a>  {
+    #[serde(flatten)]
+    pub (in super) unique_id: UID,
     #[serde(skip)]
-    pub(in super::super) group_id: &'a str,
-    #[serde(rename="elemID")]
-    pub(in super::super) elem_id: &'a str,
+    pub group_id: &'a str,
+    #[serde(skip_serializing_if = "str::is_empty")]
+    pub (in super) name: &'a str,
 
     #[serde(flatten, skip_serializing_if = "Option::is_none")]
     color: Option<Color>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    z: Option<Number>,
 
     #[serde(serialize_with="serialize_points", skip_serializing_if = "Option::is_none")]
     points: Option<Vec<Point>>,
 }
 
 #[derive(Debug)]
-struct MultiParametricPath<'a> {
-    group_id: &'a str,
-    elem_id:  &'a str,
+pub struct MultiParametricPath<'a> {
+    unique_id: UID,
+    group_id:  &'a str,
+    name:      &'a str,
 
     color:      Option<Color>,
     grad_begin: Option<Color>,
     grad_end:   Option<Color>,
     grad_ratio: Option<Number>,
 
+    z: Option<Number>,
     n: Option<Number>,
     points: Vec<Point>,
 }
@@ -46,10 +54,13 @@ struct MultiParametricPath<'a> {
 impl Default for Path<'_> {
     fn default() -> Self {
         Self {
-            group_id: "group0",
-            elem_id:  "path0",
+            unique_id: UID::unset(),
+            group_id:  "group0",
+            name:      "path0",
 
             color: Some(Color::default()),
+
+            z: Some(0.),
 
             points: Some(Vec::new()),
         }
@@ -59,14 +70,16 @@ impl Default for Path<'_> {
 impl Default for MultiParametricPath<'_> {
     fn default() -> Self {
         Self {
+            unique_id: UID::unset(),
             group_id: "group0",
-            elem_id:  "path0",
+            name:  "path0",
 
             color:      None,
             grad_begin: None,
             grad_end:   None,
             grad_ratio: None,
 
+            z: None,
             n: None,
             points: Vec::new(),
         }
@@ -80,19 +93,21 @@ impl<'a> TryFrom<MultiParametricPath<'a>> for Path<'a> {
         //   - 存在しないパラメータの補間
         //   - gradationからcolorを作成
 
-        let mut c = Path {
-            group_id: value.group_id,
-            elem_id:  value.elem_id,
+        let mut p = Path {
+            unique_id: value.unique_id,
+            group_id:  value.group_id,
+            name:      value.name,
             points: Some(value.points),
             ..Default::default()
         };
 
-        c.color = value.color.or(c.color);
+        p.z = value.z.or(p.z);
+        p.color = value.color.or(p.color);
         if value.grad_begin.is_some() && value.grad_end.is_some() && value.grad_ratio.is_some() {
-            c.color = Some(Color::from_gradation(&value.grad_begin.unwrap(), &value.grad_end.unwrap(), value.grad_ratio.unwrap()));
+            p.color = Some(Color::from_gradation(&value.grad_begin.unwrap(), &value.grad_end.unwrap(), value.grad_ratio.unwrap()));
         }
 
-        Ok(c)
+        Ok(p)
     }
 }
 
@@ -115,15 +130,16 @@ impl<'a> Visualizable<'a> for MultiParametricPath<'a> {
     fn set_by_param_name_and_word(&mut self, param_name: &'a str, word: &'a str, ctx: &Context) -> Result<(), Box<dyn Error>> {
         match param_name {
             "groupID"   => { self.group_id = word; Ok(()) },
-            "elemID"    => { self.elem_id  = word; Ok(()) },
+            "name"      => { self.name     = word; Ok(()) },
 
             "color"     => { self.color      = Some(word.parse_based_on(ctx)?); Ok(()) },
             "gradBegin" => { self.grad_begin = Some(word.parse_based_on(ctx)?); Ok(()) },
             "gradEnd"   => { self.grad_end   = Some(word.parse_based_on(ctx)?); Ok(()) },
             "gradRatio" => { self.grad_ratio = Some(word.parse_based_on(ctx)?); Ok(()) },
 
-            "n"         => { self.n          = Some(word.parse_based_on(ctx)?); Ok(()) },
+            "z"         => { self.z          = Some(word.parse_based_on(ctx)?); Ok(()) },
 
+            "n"         => { self.n          = Some(word.parse_based_on(ctx)?); Ok(()) },
             "points" => unreachable!("points should be deal with in a specialized way"),
             _ => Err(format!("this field name is not exists in 'MultiParametricPath': {}. please check settings", param_name).into())
         }
@@ -155,25 +171,23 @@ impl<'a> Visualizable<'a> for MultiParametricPath<'a> {
     }
 }
 
-// todo: default実装飲みなのでimplを書かなくてもいいようにできるかどうか確かめる
+// todo: default実装のみなのでimplを書かなくてもいいようにできるかどうか確かめる
 impl<'a> VisualizableFrom<'a, MultiParametricPath<'a>> for Path<'a> {}
 
-impl<'a> ConvertableGraphicElem<'a> for Path<'a> {
-    fn get_group_id(&self) -> &'a str { self.group_id }
+impl<'a> ElementTrait<'a> for Path<'a> {
     fn convert_to_elem(self) -> Elem<'a> { Elem::Path(self) }
     fn extract_diff_from(&self, other: &Self) -> Self {
         Self {
-            group_id: self.group_id,
-            elem_id: self.elem_id,
-            color: if self.color == other.color { None } else { self.color.clone() },
+            unique_id: self.unique_id,
+            group_id: if self.group_id == other.group_id { "" } else { self.group_id },
+            name:     if self.name     == other.name     { "" } else { self.name },
+            color:    if self.color == other.color { None } else { self.color.clone() },
+            z:        if self.z     == other.z     { None } else { self.z },
             points: match (&self.points, &other.points) {
                 (Some(sp), Some(op)) => if sp == op { None } else { Some(sp.clone()) },
                 (Some(sp), None) => Some(sp.clone()),
                 _ => None,
             }
         }
-    }
-    fn from_words_and_setting(words_iter: &mut Iter<&'a str>, setting: &'a GraphicPartsSetting, ctx: &Context) -> Result<Self, Box<dyn Error>> {
-        VisualizableFrom::<'a, MultiParametricPath<'a>>::from_words_and_setting(words_iter, setting, ctx)
     }
 }

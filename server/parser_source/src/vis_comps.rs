@@ -1,9 +1,10 @@
+mod unique_id_generator;
+
 mod common_types;
 mod graphic_elems;
-
-pub mod traits;
 
 mod graphic;
 mod chart;
 
+pub mod traits;
 pub mod vis_comps_creator;

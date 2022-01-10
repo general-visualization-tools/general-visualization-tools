@@ -4,11 +4,11 @@ use core::slice::Iter;
 use std::collections::HashMap;
 use crate::GraphicPartsSetting;
 use crate::context::Context;
-use super::traits::{ ConvertableGraphicElem };
 use super::graphic_elems::{ camera::Camera, circle::Circle, rect::Rect, path::Path };
 use super::graphic::{ Graphic, GraphicCreator };
 use super::chart::{ LineDatum, Chart, ChartCreator };
-use super::traits::Visualizable;
+use super::traits::{ Visualizable, VisualizableFrom };
+use super::graphic_elems::elems::ElementTrait;
 
 #[derive(Debug, Default, Serialize)]
 struct VisComps<'a> {
@@ -34,23 +34,29 @@ impl<'a> VisCompsCreator<'a> {
         Ok(())
     }
 
-    fn add_elem_from<T: ConvertableGraphicElem<'a>>(&mut self, words_iter: &mut Iter<&'a str>, setting: &'a GraphicPartsSetting, ctx: &Context) -> Result<(), Box<dyn Error>> {
-        let elem = <T as ConvertableGraphicElem<'a>>::from_words_and_setting(words_iter, setting, ctx)?;
-        self.group_id_to_graphic_creator.entry(elem.get_group_id()).or_insert_with(GraphicCreator::default)
-            .add(elem, ctx);
+    fn add_elem<T: ElementTrait<'a>>(&mut self, elem: T, group_id: &'a str, ctx: &Context) -> Result<(), Box<dyn Error>> {
+        self.group_id_to_graphic_creator.entry(group_id).or_insert_with(GraphicCreator::default).add(elem, ctx);
         Ok(())
     }
     pub fn add_path_from(&mut self, words_iter: &mut Iter<&'a str>, setting: &'a GraphicPartsSetting, ctx: &Context) -> Result<(), Box<dyn Error>> {
-        self.add_elem_from::<Path>(words_iter, setting, ctx)
+        let elem = Path::from_words_and_setting(words_iter, setting, ctx)?;
+        let group_id = elem.group_id;
+        self.add_elem(elem, group_id, ctx)
     }
     pub fn add_rect_from(&mut self, words_iter: &mut Iter<&'a str>, setting: &'a GraphicPartsSetting, ctx: &Context) -> Result<(), Box<dyn Error>> {
-        self.add_elem_from::<Rect>(words_iter, setting, ctx)
+        let elem = Rect::from_words_and_setting(words_iter, setting, ctx)?;
+        let group_id = elem.group_id;
+        self.add_elem(elem, group_id, ctx)
     }
     pub fn add_circle_from(&mut self, words_iter: &mut Iter<&'a str>, setting: &'a GraphicPartsSetting, ctx: &Context) -> Result<(), Box<dyn Error>> {
-        self.add_elem_from::<Circle>(words_iter, setting, ctx)
+        let elem = Circle::from_words_and_setting(words_iter, setting, ctx)?;
+        let group_id = elem.group_id;
+        self.add_elem(elem, group_id, ctx)
     }
     pub fn add_camera_from(&mut self, words_iter: &mut Iter<&'a str>, setting: &'a GraphicPartsSetting, ctx: &Context) -> Result<(), Box<dyn Error>> {
-        self.add_elem_from::<Camera>(words_iter, setting, ctx)
+        let elem = Camera::from_words_and_setting(words_iter, setting, ctx)?;
+        let group_id = elem.group_id;
+        self.add_elem(elem, group_id, ctx)
     }
 
     pub fn create_json_string(&'a mut self) -> Result<String, serde_json::Error> {

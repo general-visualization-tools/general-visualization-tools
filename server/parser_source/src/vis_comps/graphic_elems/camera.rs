@@ -1,16 +1,17 @@
 use serde::{Serialize};
-use std::slice::Iter;
 use std::error::Error;
 use crate::context::Context;
-use crate::setting::GraphicPartsSetting;
+use super::super::unique_id_generator::UID;
 use super::super::common_types::number::Number;
-use super::super::traits::{Visualizable, ParsableBasedOnCtx, ConvertableGraphicElem};
-use super::Elem;
+use super::super::traits::{ Visualizable, ParsableBasedOnCtx };
+use super::elems::{ Elem, ElementTrait };
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Camera<'a> {
+    #[serde(flatten)]
+    pub (in super) unique_id: UID,
     #[serde(skip)]
-    pub(in super::super) group_id: &'a str,
+    pub group_id: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
     x: Option<Number>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -24,6 +25,7 @@ pub struct Camera<'a> {
 impl<'a> Default for Camera<'a> {
     fn default() -> Self {
         Self {
+            unique_id: UID::unset(),
             group_id: "group0",
             x: Some(0.),
             y: Some(0.),
@@ -46,19 +48,16 @@ impl<'a> Visualizable<'a> for Camera<'a> {
     }
 }
 
-impl<'a> ConvertableGraphicElem<'a> for Camera<'a> {
-    fn get_group_id(&self) -> &'a str { self.group_id }
+impl<'a> ElementTrait<'a> for Camera<'a> {
     fn convert_to_elem(self) -> Elem<'a> { Elem::Camera(self) }
     fn extract_diff_from(&self, other: &Self) -> Self {
         Self {
-            group_id: self.group_id,
+            unique_id: self.unique_id,
+            group_id: if self.group_id == other.group_id { "" } else { self.group_id },
             x: if self.x == other.x { None } else { self.x },
             y: if self.y == other.y { None } else { self.y },
             w: if self.w == other.w { None } else { self.w },
             h: if self.h == other.h { None } else { self.h },
         }
-    }
-    fn from_words_and_setting(words_iter: &mut Iter<&'a str>, setting: &'a GraphicPartsSetting, ctx: &Context) -> Result<Self, Box<dyn Error>> {
-        <Camera<'a> as Visualizable<'a>>::from_words_and_setting(words_iter, setting, ctx)
     }
 }
